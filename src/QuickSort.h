@@ -1,0 +1,1 @@
+/* Dichiarazioni relative al QuickSort. */
