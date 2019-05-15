@@ -4,6 +4,8 @@
 #include "BitonicSort.h"
 #include "QuickSort.h"
 
+/**********FUNZIONI**********/
+
 /*
   Controlla che l'array di interi ar sia ordinato.
 
@@ -21,7 +23,8 @@
 */
 BOOL CheckSorting(int* ar, int i_arSize);
 
-/****MAIN****/
+
+/**********MAIN**********/
 int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
