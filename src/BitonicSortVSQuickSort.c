@@ -77,8 +77,8 @@ int main(int argc, char* argv[])
 		if (ar_bitonic == NULL)
 		{
 			printf(S_ALLOCATION_FAILED);
-			MPI_Finalize();
-			return ALLOCATION_FAILED;
+			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED );
+			//return ALLOCATION_FAILED;
 		}
 
 		ar_quick = copyArray(ar_bitonic, INPUT_SIZE);
@@ -86,8 +86,8 @@ int main(int argc, char* argv[])
 		{
 			printf(S_ALLOCATION_FAILED);
 			free(ar_bitonic);
-			MPI_Finalize();
-			return ALLOCATION_FAILED;
+			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED );
+			//return ALLOCATION_FAILED;
 		}
   	}
 

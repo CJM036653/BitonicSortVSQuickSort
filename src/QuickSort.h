@@ -8,4 +8,6 @@
 #define FALSE 0
 #endif
 
+#define BLOCK_SIZE 4096
+
 #endif
