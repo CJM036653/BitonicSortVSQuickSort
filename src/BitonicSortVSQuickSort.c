@@ -91,6 +91,11 @@ int main(int argc, char* argv[])
 		}
   	}
 
+	if (i_rank == 0)
+	{
+		free(ar_bitonic);
+		free(ar_quick);
+	}
   	MPI_Finalize();
   	return 0;
 }
