@@ -64,9 +64,10 @@ int* copyArray(int* ar, int i_size);
 int main(int argc, char* argv[])
 {
   	MPI_Init(&argc, &argv);
-  	/* Salva l'ID del processo in rank. */
-  	int i_rank;
+  	/* Salva l'ID del processo in rank e il numero di processi in esecuzione. */
+  	int i_rank, i_totalProcesses;
   	MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &i_totalProcesses);
 
   	/* Il processo 0 genera l'input per gli algoritmi. */
 	int* ar_bitonic;
