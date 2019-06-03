@@ -90,6 +90,8 @@ int main(int argc, char* argv[])
 			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED );
 			//return ALLOCATION_FAILED;
 		}
+
+		quickSortManager(ar_quick, INPUT_SIZE, i_totalProcesses);
   	}
 
 	if (i_rank == 0)
