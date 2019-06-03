@@ -64,21 +64,22 @@ int* copyArray(int* ar, int i_size);
 int main(int argc, char* argv[])
 {
   	MPI_Init(&argc, &argv);
-  	/* Salva l'ID del processo in rank e il numero di processi in esecuzione. */
+  	/* Salva l'ID del processo in rank e il numero di processi in i_totalProcesses. */
   	int i_rank, i_totalProcesses;
   	MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &i_totalProcesses);
 
-  	/* Il processo 0 genera l'input per gli algoritmi. */
-	int* ar_bitonic;
-	int* ar_quick;
+  	/* Il processo 0 genera l'input per gli algoritmi e li avvia. */
   	if (i_rank == 0)
   	{
+		int* ar_bitonic; /* Input per il bitonic sort. */
+		int* ar_quick; /* Input per il quicksort. */
+
 		ar_bitonic = generateRandomArray(INPUT_SIZE);
 		if (ar_bitonic == NULL)
 		{
 			printf(S_ALLOCATION_FAILED);
-			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED );
+			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED);
 			//return ALLOCATION_FAILED;
 		}
 
@@ -87,12 +88,12 @@ int main(int argc, char* argv[])
 		{
 			printf(S_ALLOCATION_FAILED);
 			free(ar_bitonic);
-			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED );
+			MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED);
 			//return ALLOCATION_FAILED;
 		}
-
-		quickSortManager(ar_quick, INPUT_SIZE, i_totalProcesses);
   	}
+
+	quickSortManager(ar_quick, INPUT_SIZE, i_totalProcesses);
 
 	if (i_rank == 0)
 	{
