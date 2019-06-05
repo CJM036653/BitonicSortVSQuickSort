@@ -90,7 +90,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 		ar_sndParams = malloc(sizeof(int) * i_totalProcesses);
 		int i;
-		for (i = 0; i < i_totalProcesses*4; i + 4)
+		for (i = 0; i < i_totalProcesses; i++)
 		{
 			ar_sndParams[i] = i_blockSize*i;
 			ar_sndParams[i+1] = i_blockSize/BLOCK_SIZE;
