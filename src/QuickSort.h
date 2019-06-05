@@ -16,7 +16,8 @@
 
 /* Grandezza dei singoli blocchi, in modo da avere 2 blocchi in cache. */
 #define BLOCK_SIZE 4096
-
+/**/
+#define PARAM_NUMBER 128
 
 /*******************FUNZIONI*******************/
 
@@ -51,7 +52,7 @@ SIDE neutralize(int* ar, int i_left, int i_right, int i_pivot);
 		int i_totalProcesses
 			Numero di processi attivi.
 */
-void quickSortManager(int* ar, int i_arSize, int i_totalProcesses);
+void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
 
 /*
 	Fasi 1 e 2 dell'algoritmo.
