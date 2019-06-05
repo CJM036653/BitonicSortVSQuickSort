@@ -9,6 +9,7 @@
 
 #define INPUT_SIZE 131072 /* Numero di elementi dell'input. */
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
+#define MAX_VALUE 1000 /* Massimo valore assunto dai dati. */
 
 #define ALLOCATION_FAILED 1 /* Codice di errore per allocazione fallita. */
 #define S_ALLOCATION_FAILED "Allocazione fallita - Uscita dal programma.\n"
@@ -93,6 +94,7 @@ int main(int argc, char* argv[])
 		}
   	}
 
+	MPI_Bcast(&ar_quick, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	quickSortManager(ar_quick, INPUT_SIZE, i_rank, i_totalProcesses);
 
 	if (i_rank == 0)
@@ -128,7 +130,7 @@ int* generateRandomArray(int i_size)
   	int i = 0;
   	for (i; i < i_size; i++)
   	{
-    	ar[i] = rand();
+    	ar[i] = rand() % MAX_VALUE;
   	}
   	return ar;
 }

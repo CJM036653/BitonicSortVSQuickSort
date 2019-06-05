@@ -88,15 +88,16 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 		printf("Min, max, pivot: %d, %d, %d; (process %d)\n", i_min, i_max, i_pivot, i_rank);
 
-		ar_sndParams = malloc(sizeof(int) * i_totalProcesses);
-		int i;
+		ar_sndParams = malloc(sizeof(int) * i_totalProcesses * 4);
+		if (ar_sndParams == NULL) return;
+		int i, j;
+		j = 0;
 		for (i = 0; i < i_totalProcesses; i++)
 		{
-			ar_sndParams[i] = i_blockSize*i;
-			ar_sndParams[i+1] = i_blockSize/BLOCK_SIZE;
-			ar_sndParams[i+2] = i_arSize - i_blockSize*i;
-			ar_sndParams[i+3] = i_blockSize/BLOCK_SIZE;
-			printf("ParamCreation: %d, %d, %d, %d (process %d)\n", ar_sndParams[i], ar_sndParams[i+1], ar_sndParams[i+2], ar_sndParams[i+3], i_rank);
+			ar_sndParams[j] = i_blockSize*i;
+			ar_sndParams[++j] = i_blockSize/BLOCK_SIZE;
+			ar_sndParams[++j] = i_arSize - i_blockSize*i;
+			ar_sndParams[++j] = i_blockSize/BLOCK_SIZE;
 		}
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -107,5 +108,5 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 int phaseOneTwo(int* ar, int i_leftStart, int i_leftBlocks, int i_rightStart, int i_rightBlocks, int i_pivot)
 {
-
+	return 0;
 }
