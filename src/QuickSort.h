@@ -39,7 +39,7 @@
 		RIGHT se e' stato neutralizzato il blocco destro.
 		BOTH se sono stati neutralizzati entrambi i blocchi.
 */
-SIDE neutralize(int* ar, int i_left, int i_right, int i_pivot);
+SIDE neutralize(int* ar, int i_left, int i_right, int i_pivot, SIDE* ar_result, int i_rank);
 
 /*
 	Fase 3 dell'algoritmo, richiama iterativamente le fasi 1 e 2.
@@ -72,8 +72,9 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
 			Valore del pivot.
 
 	***Restituzione***
-		Indice dello split point, ovvero il primo elemento della parte destra dell'array.
+		Indice iniziale del blocco non neutralizzato.
+		-1 se tutti i blocchi sono stati neutralizzati.
 */
-int phaseOneTwo(int* ar, int i_leftStart, int i_leftBlocks, int i_rightStart, int i_rightBlocks, int i_pivot);
+int phaseOne(int* ar, int i_leftStart, int i_leftBlocks, int i_rightStart, int i_rightBlocks, int i_pivot, int i_rank);
 
 #endif
