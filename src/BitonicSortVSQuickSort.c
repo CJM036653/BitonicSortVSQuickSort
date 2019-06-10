@@ -8,7 +8,6 @@
 #include "QuickSort.h"
 
 #define INPUT_SIZE 131072 /* Numero di elementi dell'input. */
-#define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
 #define MAX_VALUE 1000 /* Massimo valore assunto dai dati. */
 
 #define ALLOCATION_FAILED 1 /* Codice di errore per allocazione fallita. */
@@ -70,8 +69,8 @@ int main(int argc, char* argv[])
   	int i_rank, i_totalProcesses;
   	MPI_Comm_rank(MPI_COMM_WORLD, &i_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &i_totalProcesses);
-	int* ar_bitonic; /* Input per il bitonic sort. */
-	int* ar_quick; /* Input per il quicksort. */
+	int* ar_bitonic = NULL; /* Input per il bitonic sort. */
+	int* ar_quick = NULL; /* Input per il quicksort. */
 
   	/* Il processo 0 genera l'input per gli algoritmi e li avvia. */
   	if (i_rank == 0)

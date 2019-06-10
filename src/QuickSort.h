@@ -18,6 +18,7 @@
 #define BLOCK_SIZE 4096
 /**/
 #define PARAM_NUMBER 128
+#define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
 
 /*******************FUNZIONI*******************/
 
@@ -39,7 +40,7 @@
 		RIGHT se e' stato neutralizzato il blocco destro.
 		BOTH se sono stati neutralizzati entrambi i blocchi.
 */
-SIDE neutralize(int* ar, int i_left, int i_right, int i_pivot, int* iPtr_remainingBlock);
+SIDE neutralize(int* ar_left, int* ar_right, int i_pivot);
 
 /*
 	Fase 3 dell'algoritmo, richiama iterativamente le fasi 1 e 2.
