@@ -165,35 +165,19 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		}
 
 		lastNeutralizedSide = neutralize(ar_left, ar_right, i_pivot);
-
-		printf("P: %d, BEFORE: %d\n", i_rank, lastNeutralizedSide);
-		MPI_Barrier(MPI_COMM_WORLD);
-		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, i_totalProcesses, MPI_INT, 0, MPI_COMM_WORLD);
-
-		if (i_rank == 0)
-		{
-			for (int i = 0; i < i_totalProcesses; i++)
-			{
-				printf("%d\n", ar_neutralizedSides[i]);
-			}
-		}
-
-		printf("P: %d, AFTER: %d\n", i_rank, lastNeutralizedSide);
+		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 		if (lastNeutralizedSide == BOTH)
 		{
-			printf("P: %d, BOTH\n", i_rank);
 			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), MPI_COMM_WORLD, &reqs[0]);
 			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, MPI_COMM_WORLD, &reqs[1]);
 		}
 		else if (lastNeutralizedSide == LEFT)
 		{
-			printf("P: %d, LEFT\n", i_rank);
 			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), MPI_COMM_WORLD, &reqs[0]);
 		}
 		else
 		{
-			printf("P: %d, RIGHT\n", i_rank);
 			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, MPI_COMM_WORLD, &reqs[0]);
 		}
 
@@ -236,7 +220,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		int i;
 		for (i = 0; i < i_arSize; i++)
 		{
-			printf("%d", ar[i_arSize]);
+			printf("%d", ar[i]);
 		}
 		printf("\n");
 	}
