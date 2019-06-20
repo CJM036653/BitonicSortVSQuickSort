@@ -387,6 +387,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		}
 		printf("\n");
 		printf("LN: %d, RN: %d\n", i_LN, i_RN);
+		printf("i_splitPoint %d\n", i_splitPoint);
 	}
 
 }
