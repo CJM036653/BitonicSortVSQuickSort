@@ -117,6 +117,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		}
 
 		i_pivot = (i_min + i_max)/2;
+		printf("%d\n", i_pivot );
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
