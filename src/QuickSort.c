@@ -6,6 +6,19 @@
 #include <time.h>
 #include <mpi.h>
 
+static void swap(int* ar, int i_left, int i_right)
+{
+	int q, temp;
+	for (q = 0; q < BLOCK_SIZE; q++)
+	{
+		temp = ar[i_left];
+		ar[i_right] = ar[i_right];
+		ar[i_right] = temp;
+		++i_left;
+		++i_right;
+	}
+}
+
 SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 {
 	int i_left, i_right;
@@ -52,10 +65,12 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 
 void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 {
+	int i_splitPoint;
+
 	/*********** FASE UNO ***********/
 	int i_LN, i_RN, i_leftBlock, i_rightBlock, i_pivot;
-	i_LN = 0;
-	i_RN = i_arSize;
+	i_LN = -BLOCK_SIZE;
+	i_RN = i_arSize + BLOCK_SIZE;
 	i_leftBlock = 0;
 	i_rightBlock = i_arSize - BLOCK_SIZE;
 
@@ -215,15 +230,163 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		}
 	}
 
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	/*********** FASE DUE ***********/
+
+	if(i_rank == 0)
+	{
+		printf("\n");
+		printf("PostR1 -> LN: %d, RN: %d\n", i_LN, i_RN);
+
+		/* Ordinamento dell'array ar_remainingBlocks. */
+		int i, temp;
+		for (i = 0; i < i_totalProcesses-1; i++)
+		{
+			int j;
+			int i_min = ar_remainingBlocks[i];
+			int i_minIndex = 0;
+			for (j = i+1; j < i_totalProcesses; j++)
+			{
+					if (ar_remainingBlocks[j] < i_min)
+					{
+						 i_min = ar_remainingBlocks[j];
+						 i_minIndex = j;
+					}
+			}
+			temp = ar_remainingBlocks[i];
+			ar_remainingBlocks[i] = i_min;
+			ar_remainingBlocks[i_minIndex] = temp;
+		}
+
+		/* Salta i pocessori che hanno neutralizzato tutti i blocchi. */
+		i = 0;
+		int j = i_totalProcesses-1;
+		while (ar_remainingBlocks[i] == -1)
+		{
+			++i;
+		}
+
+		/* Neutralizza i blocchi rimanenti. */
+		while (i < i_totalProcesses &&
+					 i < j &&
+				 	 ar_remainingBlocks[i] < i_LN &&
+					 ar_remainingBlocks[j] >= i_RN)
+		{
+			lastNeutralizedSide = neutralize(&ar[ar_remainingBlocks[i]], &ar[ar_remainingBlocks[j]], i_pivot);
+			if (lastNeutralizedSide == BOTH)
+			{
+				i_LN += BLOCK_SIZE;
+				i_RN -= BLOCK_SIZE;
+				++i;
+				--j;
+			}
+			else if (lastNeutralizedSide == LEFT)
+			{
+				i_LN -= BLOCK_SIZE;
+				++i;
+			}
+			else
+			{
+				i_RN -= BLOCK_SIZE;
+				--j;
+			}
+		}
+
+		printf("\n");
+		printf("PreSwap -> LN: %d, RN: %d\n", i_LN, i_RN);
+
+		/* Superato i_LN o i_RN riposiziona i blocchi non neutralizzati
+			 dentro l'intervallo [i_LN, i_RN[. */
+		while (ar_remainingBlocks[i] < i_LN || ar_remainingBlocks[j] > i_RN)
+		{
+			if (ar_remainingBlocks[i] < i_LN)
+			{
+				int i_swapL, i_swapR, z1, z2;
+				i_swapL = ar_remainingBlocks[i];
+				z1 = i_LN;
+
+				BOOL done = FALSE;
+				while (z1 < i_RN && !done)
+				{
+					z2 = i+1;
+					while (ar_remainingBlocks[z2] < i_RN && ar_remainingBlocks[z2] != z1)
+					{
+						++z2;
+					}
+					if (ar_remainingBlocks[z2] == z1)
+					{
+						z1 += BLOCK_SIZE;
+						done = TRUE;
+					}
+				}
+
+				i_swapR = ar_remainingBlocks[z2];
+				swap(ar, i_swapL, i_swapR);
+				++i;
+			}
+			else if (ar_remainingBlocks[j] >= i_RN)
+			{
+				int i_swapL, i_swapR, z1, z2;
+				i_swapR = ar_remainingBlocks[j];
+				z1 = i_RN;
+
+				BOOL done = FALSE;
+				while (z1 >= i_LN && !done)
+				{
+					z2 = j-1;
+					while (ar_remainingBlocks[z2] >= i_RN && ar_remainingBlocks[z2] != z1)
+					{
+						--z2;
+					}
+					if (ar_remainingBlocks[z2] == z1)
+					{
+						z1 -= BLOCK_SIZE;
+						done = TRUE;
+					}
+				}
+
+				i_swapL = ar_remainingBlocks[z2];
+				swap(ar, i_swapL, i_swapR);
+				--j;
+			}
+		}
+
+		/* Partizionamento degli elementi rimanenti in base al pivot. */
+		while (i_LN < i_RN)
+		{
+			if (ar[i_LN] <= i_pivot)
+			{
+				++i_LN;
+			}
+			else if (ar[i_RN] >= i_pivot)
+			{
+				--i_RN;
+			}
+			else
+			{
+				temp = ar[i_LN];
+				ar[i_LN] = ar[i_RN];
+				ar[i_RN] = temp;
+				++i_LN;
+				--i_RN;
+			}
+		}
+
+	}
+
+	i_splitPoint = i_LN;
+
+
 	if (i_rank == 0)
 	{
 		int i;
-		for (i = 0; i < i_arSize; i++)
+		for (i = 0; i < i_totalProcesses; i++)
 		{
-			printf("%d", ar[i]);
+			printf("%d\n", ar_remainingBlocks[i]);
 		}
 		printf("\n");
+		printf("LN: %d, RN: %d\n", i_LN, i_RN);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
 }

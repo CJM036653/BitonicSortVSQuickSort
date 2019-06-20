@@ -7,7 +7,7 @@
 #include "BitonicSort.h"
 #include "QuickSort.h"
 
-#define INPUT_SIZE 131072 /* Numero di elementi dell'input. */
+#define INPUT_SIZE 536870912 /* Numero di elementi dell'input. */
 #define MAX_VALUE 1000 /* Massimo valore assunto dai dati. */
 
 #define ALLOCATION_FAILED 1 /* Codice di errore per allocazione fallita. */
