@@ -266,9 +266,9 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 		/* Neutralizza i blocchi rimanenti. */
 		while (i < i_totalProcesses &&
-					 i < j &&
-				 	 ar_remainingBlocks[i] < i_LN &&
-					 ar_remainingBlocks[j] >= i_RN)
+    		   i < j &&
+    		   ar_remainingBlocks[i] < i_LN &&
+    		   ar_remainingBlocks[j] >= i_RN)
 		{
 			lastNeutralizedSide = neutralize(&ar[ar_remainingBlocks[i]], &ar[ar_remainingBlocks[j]], i_pivot);
 			if (lastNeutralizedSide == BOTH)
