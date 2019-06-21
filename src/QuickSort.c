@@ -6,6 +6,7 @@
 #include <time.h>
 #include <mpi.h>
 
+/* Inverte due blocchi di grandezza BLOCK_SIZE. */
 static void swap(int* ar, int i_left, int i_right)
 {
 	int q, temp;
@@ -21,9 +22,8 @@ static void swap(int* ar, int i_left, int i_right)
 
 SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 {
-	int i_left, i_right;
-	i_left = 0;
-	i_right = 0;
+	int i_left = 0; /* Posizione nel blocco di sinistra. */
+    int i_right = 0; /* Posizione nel blocco di destra. */
 
 	do
 	{
@@ -117,7 +117,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		}
 
 		i_pivot = (i_min + i_max)/2;
-		printf("%d\n", i_pivot );
+        printf("Pivot: %d\n", i_pivot);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -230,16 +230,12 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 			MPI_Waitall(k, reqs0, status);
 		}
 	}
-
 	MPI_Barrier(MPI_COMM_WORLD);
 
+
 	/*********** FASE DUE ***********/
-
-	if(i_rank == 0)
+	if (i_rank == 0)
 	{
-		printf("\n");
-		printf("PostR1 -> LN: %d, RN: %d\n", i_LN, i_RN);
-
 		/* Ordinamento dell'array ar_remainingBlocks. */
 		int i, temp;
 		for (i = 0; i < i_totalProcesses-1; i++)
@@ -294,64 +290,59 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 			}
 		}
 
-		printf("\n");
-		printf("PreSwap -> LN: %d, RN: %d\n", i_LN, i_RN);
-
 		/* Superato i_LN o i_RN riposiziona i blocchi non neutralizzati
 			 dentro l'intervallo [i_LN, i_RN[. */
-		while (ar_remainingBlocks[i] < i_LN || ar_remainingBlocks[j] > i_RN)
-		{
-			if (ar_remainingBlocks[i] < i_LN)
-			{
-				int i_swapL, i_swapR, z1, z2;
-				i_swapL = ar_remainingBlocks[i];
-				z1 = i_LN;
+        int i_swapL, i_swapR;
+        if (ar_remainingBlocks[i] < i_LN)
+        {
+            i_swapR = i_LN;
+        }
+        else if (ar_remainingBlocks[j] >= i_RN)
+        {
+            i_swapL = i_RN - BLOCK_SIZE;
+        }
 
-				BOOL done = FALSE;
-				while (z1 < i_RN && !done)
-				{
-					z2 = i+1;
-					while (ar_remainingBlocks[z2] < i_RN && ar_remainingBlocks[z2] != z1)
-					{
-						++z2;
-					}
-					if (ar_remainingBlocks[z2] == z1)
-					{
-						z1 += BLOCK_SIZE;
-						done = TRUE;
-					}
-				}
+        while (i < i_totalProcesses && ar_remainingBlocks[i] < i_LN)
+        {
+            /* Verifica se i_swapR e' un blocco non neutralizzato. */
+            int i_searchCounter = i+i;
+            while (i_searchCounter < i_totalProcesses && i_swapR != ar_remainingBlocks[i_searchCounter])
+            {
+                ++i_searchCounter;
+            }
+            /* Se i_swapR e' gia' stato neutralizzato, prova con il blocco successivo. */
+            if (i_swapR == ar_remainingBlocks[i_searchCounter])
+            {
+                i_swapR += BLOCK_SIZE;
+            }
+            /* Altrimenti inverti i_swapL e i_swapR e passa al blocco da invertire successivo. */
+            else
+            {
+                swap(ar, i_swapL, i_swapR);
+                i_swapL = ar_remainingBlocks[++i];
+            }
+        }
 
-				i_swapR = ar_remainingBlocks[z2];
-				swap(ar, i_swapL, i_swapR);
-				++i;
-			}
-			else if (ar_remainingBlocks[j] >= i_RN)
-			{
-				int i_swapL, i_swapR, z1, z2;
-				i_swapR = ar_remainingBlocks[j];
-				z1 = i_RN;
-
-				BOOL done = FALSE;
-				while (z1 >= i_LN && !done)
-				{
-					z2 = j-1;
-					while (ar_remainingBlocks[z2] >= i_RN && ar_remainingBlocks[z2] != z1)
-					{
-						--z2;
-					}
-					if (ar_remainingBlocks[z2] == z1)
-					{
-						z1 -= BLOCK_SIZE;
-						done = TRUE;
-					}
-				}
-
-				i_swapL = ar_remainingBlocks[z2];
-				swap(ar, i_swapL, i_swapR);
-				--j;
-			}
-		}
+        while (j >= 0 && ar_remainingBlocks[j] >= i_RN)
+        {
+            /* Verifica se i_swapL e' un blocco non neutralizzato. */
+            int i_searchCounter = j-1;
+            while (i_searchCounter > 0 && i_swapL != ar_remainingBlocks[i_searchCounter])
+            {
+                --i_searchCounter;
+            }
+            /* Se i_swapL e' gia' stato neutralizzato, prova con il blocco precedente. */
+            if (i_swapL == ar_remainingBlocks[i_searchCounter])
+            {
+                i_swapL -= BLOCK_SIZE;
+            }
+            /* Altrimenti inverti i_swapL e i_swapR e passa al blocco da invertire precedente. */
+            else
+            {
+                swap(ar, i_swapL, i_swapR);
+                i_swapR = ar_remainingBlocks[--j];
+            }
+        }
 
 		/* Partizionamento degli elementi rimanenti in base al pivot. */
 		while (i_LN < i_RN)
@@ -373,10 +364,10 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 				--i_RN;
 			}
 		}
-
+        i_splitPoint = i_LN;
 	}
 
-	i_splitPoint = i_LN;
+
 
 
 	if (i_rank == 0)
@@ -384,7 +375,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		int i;
 		for (i = 0; i < i_totalProcesses; i++)
 		{
-			printf("%d\n", ar_remainingBlocks[i]);
+			printf("RemainingBlock[%d]: %d\n", i, ar_remainingBlocks[i]);
 		}
 		printf("\n");
 		printf("LN: %d, RN: %d\n", i_LN, i_RN);
