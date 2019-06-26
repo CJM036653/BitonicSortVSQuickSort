@@ -63,7 +63,7 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 	return RIGHT;
 }
 
-void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
+int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator)
 {
 	int i_splitPoint;
 
@@ -119,11 +119,11 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		i_pivot = (i_min + i_max)/2;
         printf("Pivot: %d\n", i_pivot);
 	}
-	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
 	while (i_leftBlock < i_rightBlock)
 	{
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(communicator);
 		if (i_rank == 0)
 		{
 			int i, j;
@@ -133,10 +133,10 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 				if (ar_neutralizedSides[i] == BOTH)
 				{
 					ar_sndParams[j] = i_leftBlock;
-					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs[0]);
+					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs[0]);
 					i_leftBlock += BLOCK_SIZE;
 					ar_sndParams[++j] = i_rightBlock;
-					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs[1]);
+					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs[1]);
 					i_rightBlock -= BLOCK_SIZE;
 					ar_remainingBlocks[i] = -1;
 					++j;
@@ -146,7 +146,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 				else if (ar_neutralizedSides[i] == LEFT)
 				{
 					ar_sndParams[j] = i_leftBlock;
-					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs[2]);
+					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs[2]);
 					i_leftBlock += BLOCK_SIZE;
 					ar_remainingBlocks[i] = ar_sndParams[++j];
 					++j;
@@ -156,45 +156,45 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 				{
 					ar_remainingBlocks[i] = ar_sndParams[j];
 					ar_sndParams[++j] = i_rightBlock;
-					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs[3]);
+					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs[3]);
 					i_rightBlock -= BLOCK_SIZE;
 					++j;
 					i_RN -= BLOCK_SIZE;
 				}
 			}
 		}
-		MPI_Bcast(&i_leftBlock, 1, MPI_INT, 0, MPI_COMM_WORLD);
-		MPI_Bcast(&i_rightBlock, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&i_leftBlock, 1, MPI_INT, 0, communicator);
+		MPI_Bcast(&i_rightBlock, 1, MPI_INT, 0, communicator);
 
 		if (lastNeutralizedSide == BOTH)
 		{
-			MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1) + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1), communicator, MPI_STATUS_IGNORE);
+			MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1) + 1, communicator, MPI_STATUS_IGNORE);
 		}
 		else if (lastNeutralizedSide == LEFT)
 		{
-			MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1), MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1), communicator, MPI_STATUS_IGNORE);
 		}
 		else
 		{
-			MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1) + 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, (i_rank << 1) + 1, communicator, MPI_STATUS_IGNORE);
 		}
 
 		lastNeutralizedSide = neutralize(ar_left, ar_right, i_pivot);
-		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, 1, MPI_INT, 0, communicator);
 
 		if (lastNeutralizedSide == BOTH)
 		{
-			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), MPI_COMM_WORLD, &reqs[0]);
-			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, MPI_COMM_WORLD, &reqs[1]);
+			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), communicator, &reqs[0]);
+			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, communicator, &reqs[1]);
 		}
 		else if (lastNeutralizedSide == LEFT)
 		{
-			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), MPI_COMM_WORLD, &reqs[0]);
+			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), communicator, &reqs[0]);
 		}
 		else
 		{
-			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, MPI_COMM_WORLD, &reqs[0]);
+			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, communicator, &reqs[0]);
 		}
 
 		if (i_rank == 0)
@@ -206,23 +206,23 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 			{
 				if (ar_neutralizedSides[i] == BOTH)
 				{
-					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs0[k]);
+					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs0[k]);
 					++j;
 					++k;
-					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs0[k]);
+					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs0[k]);
 					++j;
 					++k;
 				}
 				else if (ar_neutralizedSides[i] == LEFT)
 				{
-					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs0[k]);
+					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs0[k]);
 					j+=2;
 					++k;
 				}
 				else
 				{
 					++j;
-					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, MPI_COMM_WORLD, &reqs0[k]);
+					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs0[k]);
 					++j;
 					++k;
 				}
@@ -230,7 +230,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 			MPI_Waitall(k, reqs0, status);
 		}
 	}
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(communicator);
 
 
 	/*********** FASE DUE ***********/
@@ -367,8 +367,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         i_splitPoint = i_LN;
 	}
 
-
-
+	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 
 	if (i_rank == 0)
 	{
@@ -382,4 +381,70 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 		printf("i_splitPoint %d\n", i_splitPoint);
 	}
 
+	return i_splitPoint;
+}
+
+void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
+{
+	/*********** FASE TRE ***********/
+	int i_groupSize = i_totalProcesses;
+	int i_rootProcess = 0;
+	int i_currentRank = i_rank;
+	int i_currentSize = i_arSize;
+
+	int* ar_rootIndices = NULL;
+	if (i_rank == 0)
+	{
+		ar_rootIndices = malloc(sizeof(int) * i_totalProcesses);
+		ar_rootIndices[0] = 0;
+		int i;
+		for (i = 1; i < i_totalProcesses; ++i)
+		{
+			ar_rootIndices[i] = -1;
+		}
+	}
+
+	MPI_Request req0, req1;
+	MPI_Comm communicator;
+	MPI_Comm_dup(MPI_COMM_WORLD, &communicator);
+
+	do
+	{
+		int i_splitPoint = phaseOneTwo(ar, i_currentSize, i_currentRank, i_groupSize, communicator);
+		if (i_rank == i_rootProcess)
+		{
+			MPI_Isend(ar, i_currentSize, MPI_INT, 0, i_rank, MPI_COMM_WORLD, &req0);
+		}
+
+		int i_L1 = i_splitPoint;
+		int i_L2 = i_arSize - i_L1;
+		int i_P2 = (i_L2 * i_groupSize)/i_arSize;
+		int i_P1 = i_groupSize - i_P2;
+		if (i_rank >= i_rootProcess && i_rank < i_rootProcess + i_P1)
+		{
+			i_groupSize = i_P1;
+			if (i_groupSize == 1)
+			{
+				int exitCode = -1;
+				MPI_Isend(&exitCode, 1, MPI_INT, i_rootProcess, MPI_COMM_WORLD, &req1);
+			}
+			else if (i_rank == i_rootProcess)
+			{
+				int i_leftAr = i_startIndex;
+				MPI_Isend();
+			}
+		}
+		else
+		{
+			i_rootProcess += i_P1;
+			i_groupSize = i_P2;
+		}
+
+		MPI_Comm newcommunicator;
+		MPI_Comm_split(communicator, i_rootProcess, 0, &newcommunicator);
+		MPI_Comm_free(&communicator);
+		communicator = newcommunicator;
+		MPI_Comm_rank(communicator, &i_currentRank);
+
+	} while(i_groupSize > 1);
 }

@@ -2,6 +2,8 @@
 #ifndef QUICK_SORT_H
 #define QUICK_SORT_H
 
+#include <mpi.h>
+
 #ifndef BOOL
 #define BOOL int
 #define TRUE 1
@@ -53,5 +55,7 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot);
 		int i_totalProcesses
 			Numero di processi attivi.
 */
+int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator);
+
 void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
 #endif
