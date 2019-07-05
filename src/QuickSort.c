@@ -6,6 +6,13 @@
 #include <time.h>
 #include <mpi.h>
 
+#define START_INDEX_TAG 1
+#define SECTION_LENGTH_TAG 2
+#define UPDATED_ARRAY_TAG 3
+#define CONTINUE_TAG 4
+#define NEW_ARRAY_TAG 5
+#define ROOT_TAG 6
+
 /* Inverte due blocchi di grandezza BLOCK_SIZE. */
 static void swap(int* ar, int i_left, int i_right)
 {
@@ -121,7 +128,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
-	while (i_leftBlock < i_rightBlock)
+	while (i_leftBlock < i_rightBlock - BLOCK_SIZE)
 	{
 		MPI_Barrier(communicator);
 		if (i_rank == 0)
@@ -369,6 +376,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 
 	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 
+    /*
 	if (i_rank == 0)
 	{
 		int i;
@@ -380,71 +388,183 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 		printf("LN: %d, RN: %d\n", i_LN, i_RN);
 		printf("i_splitPoint %d\n", i_splitPoint);
 	}
-
+    */
 	return i_splitPoint;
 }
 
+/* SISTEMARE CODICE PER FUNZIONARE CON INPUT NON MULTIPLO DI BLOCK_SIZE. *********************************************************************************************** */
 void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 {
-	/*********** FASE TRE ***********/
-	int i_groupSize = i_totalProcesses;
-	int i_rootProcess = 0;
-	int i_currentRank = i_rank;
-	int i_currentSize = i_arSize;
+    int iteration = 1;
 
-	int* ar_rootIndices = NULL;
+    int* ar_currentAr = ar;
+    int i_currentSize = i_arSize;
+    int i_currentRank = i_rank;
+    int i_groupSize = i_totalProcesses;
+    int i_processesInPhase3 = i_totalProcesses;
+    int i_rootProcess = 0;
+    MPI_Comm communicator;
+    MPI_Comm_dup(MPI_COMM_WORLD, &communicator);
+    char currentChar = 1;
+    int i_startIndex = 0; /* Indice di partenza della sezione considerata da un processo. */
+
+    /* Array che tiene conto di quali processori sono i root dell'iterazione corrente. */
+    int i_rootsNumber = 1; /* Numero di root dell'iterazione corrente. */
+    char* ar_rootIndices = NULL;
 	if (i_rank == 0)
 	{
-		ar_rootIndices = malloc(sizeof(int) * i_totalProcesses);
-		ar_rootIndices[0] = 0;
-		int i;
-		for (i = 1; i < i_totalProcesses; ++i)
-		{
-			ar_rootIndices[i] = -1;
-		}
+		ar_rootIndices = calloc(sizeof(char), i_totalProcesses);
 	}
 
-	MPI_Request req0, req1;
-	MPI_Comm communicator;
-	MPI_Comm_dup(MPI_COMM_WORLD, &communicator);
+    do
+    {
+        /* Esegui fasi 1 e 2. */
+        int i_splitPoint;
+        if (i_groupSize > 1)
+        {
+            i_splitPoint = phaseOneTwo(ar_currentAr, i_currentSize, i_currentRank, i_groupSize, communicator);
+        }
 
-	do
-	{
-		int i_splitPoint = phaseOneTwo(ar, i_currentSize, i_currentRank, i_groupSize, communicator);
-		if (i_rank == i_rootProcess)
-		{
-			MPI_Isend(ar, i_currentSize, MPI_INT, 0, i_rank, MPI_COMM_WORLD, &req0);
-		}
+        /* Raccolta dei dati aggiornati. */
+        MPI_Request reqStartIndex, reqLen, reqContinue;
+        if (i_rank == i_rootProcess && i_rank != 0)
+        {
+            MPI_Isend(&i_startIndex, 1, MPI_INT, 0, START_INDEX_TAG, MPI_COMM_WORLD, &reqStartIndex);
+            MPI_Isend(&i_currentSize, 1, MPI_INT, 0, SECTION_LENGTH_TAG, MPI_COMM_WORLD, &reqLen);
+            MPI_Isend(ar_currentAr, i_currentSize, MPI_INT, 0, UPDATED_ARRAY_TAG, MPI_COMM_WORLD, &reqContinue);
+        }
+        if (i_rank == 0)
+        {
+            int i;
+            for (i = 1; i < i_totalProcesses; ++i)
+            {
+                if (ar_rootIndices[i] == currentChar)
+                {
+                    int i_start, i_len;
+                    MPI_Recv(&i_start, 1, MPI_INT, i, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&ar[i_start], i_len, MPI_INT, i, UPDATED_ARRAY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+            }
+        }
 
-		int i_L1 = i_splitPoint;
-		int i_L2 = i_arSize - i_L1;
-		int i_P2 = (i_L2 * i_groupSize)/i_arSize;
-		int i_P1 = i_groupSize - i_P2;
+        /* Dividi i processi tra le due parti dell'array. */
+        int i_L1 = i_splitPoint; /* Grandezza del blocco di sinistra. */
+		int i_L2 = i_arSize - i_L1; /* Grandezza del blocco di destra. */
+		int i_P2 = (i_L2 * i_groupSize)/i_arSize; /* Numero di processi della parte di destra. */
+		int i_P1 = i_groupSize - i_P2; /* Numero di processi della parte di sinistra. */
+
+        /* Se il processo corrente e' nella parte sinistra... */
 		if (i_rank >= i_rootProcess && i_rank < i_rootProcess + i_P1)
 		{
 			i_groupSize = i_P1;
-			if (i_groupSize == 1)
-			{
-				int exitCode = -1;
-				MPI_Isend(&exitCode, 1, MPI_INT, i_rootProcess, MPI_COMM_WORLD, &req1);
-			}
-			else if (i_rank == i_rootProcess)
-			{
-				int i_leftAr = i_startIndex;
-				MPI_Isend();
-			}
+            i_currentSize = i_L1;
 		}
+        /* Se il processo corrente e' nella parte destra... */
 		else
 		{
 			i_rootProcess += i_P1;
 			i_groupSize = i_P2;
+            i_currentSize = i_L2;
+            i_startIndex += i_L1;
 		}
 
-		MPI_Comm newcommunicator;
-		MPI_Comm_split(communicator, i_rootProcess, 0, &newcommunicator);
-		MPI_Comm_free(&communicator);
-		communicator = newcommunicator;
-		MPI_Comm_rank(communicator, &i_currentRank);
+        /* Informa il processo 0 se il processo corrente resta nella fase 3 o passa alla fase 4.
+           Il processo 0 deve rimanere nel ciclo per coordinare gli altri. */
+        BOOL b_continue = TRUE;
+        if (i_groupSize == 1 && i_rank != 0)
+        {
+            b_continue = FALSE;
+            i_processesInPhase3 = 1;
+        }
 
-	} while(i_groupSize > 1);
+        MPI_Isend(&b_continue, 1, MPI_INT, 0, CONTINUE_TAG, MPI_COMM_WORLD, &reqContinue);
+
+        /* Il processo 0 aggiorna il conto di quanti processi sono ancora nella fase 3. */
+        if (i_rank == 0)
+        {
+            int i;
+            int i_maxIter = i_processesInPhase3;
+            for (i = 0; i < i_maxIter; ++i)
+            {
+                BOOL b_contTemp;
+                MPI_Recv(&b_contTemp, 1, MPI_INT, MPI_ANY_SOURCE, CONTINUE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                if (b_contTemp == FALSE)
+                {
+                    --i_processesInPhase3;
+                }
+            }
+        }
+
+        /* Se il processo resta nella fase 3, prepara la prossima iterazione. */
+            /* Creazione del nuovo comunicatore. */
+        MPI_Comm newcommunicator;
+        MPI_Comm_split(communicator, i_rootProcess, 0, &newcommunicator);
+        MPI_Comm_free(&communicator);
+        communicator = newcommunicator;
+        MPI_Comm_rank(communicator, &i_currentRank);
+
+        if (b_continue && i_rank == i_rootProcess && i_rank != 0)
+        {
+            free(ar_currentAr);
+            ar_currentAr = malloc(sizeof(int) * i_currentSize);
+        }
+
+        /* Comunica al processo 0 i root della prossima iterazione. */
+        if (i_rank == i_rootProcess && i_rank != 0)
+        {
+            if (b_continue)
+            {
+                MPI_Isend(&i_rank, 1, MPI_INT, 0, ROOT_TAG, MPI_COMM_WORLD, &reqContinue);
+                MPI_Isend(&i_startIndex, 1, MPI_INT, 0, START_INDEX_TAG, MPI_COMM_WORLD, &reqStartIndex);
+                MPI_Isend(&i_currentSize, 1, MPI_INT, 0, SECTION_LENGTH_TAG, MPI_COMM_WORLD, &reqLen);
+                /* Ricevi il prossimo array da elaborare. */
+                MPI_Irecv(ar_currentAr, i_currentSize, MPI_INT, 0, NEW_ARRAY_TAG, MPI_COMM_WORLD, &reqContinue);
+            }
+            else
+            {
+                int temp = -1;
+                MPI_Isend(&temp, 1, MPI_INT, 0, ROOT_TAG, MPI_COMM_WORLD, &reqContinue);
+            }
+        }
+
+        if (i_rank == 0)
+        {
+            /* Riceve i root della prossima iterazione. */
+            int i;
+            int i_newRootsNumber = i_rootsNumber;
+            int i_maxIter = i_rootsNumber << 1;
+            ++currentChar;
+            for (i = 1; i < i_maxIter; ++i)
+            {
+                int i_index;
+                MPI_Recv(&i_index, 1, MPI_INT, MPI_ANY_SOURCE, ROOT_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                if (i_index != -1)
+                {
+                    ++i_newRootsNumber;
+                    ar_rootIndices[i_index] = currentChar;
+                }
+            }
+
+            /* Distribuisce ai root i loro array. */
+            for (i = 1; i < i_totalProcesses; ++i)
+            {
+                if (ar_rootIndices[i] == currentChar)
+                {
+                    int i_start, i_len;
+                    MPI_Recv(&i_start, 1, MPI_INT, i, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                    MPI_Isend(&ar[i_start], i_len, MPI_INT, i, NEW_ARRAY_TAG, MPI_COMM_WORLD, &reqContinue);
+                }
+            }
+        }
+
+        if (b_continue && i_rank == i_rootProcess)
+        {
+            MPI_Wait(&reqContinue, MPI_STATUS_IGNORE);
+        }
+        iteration++;
+    } while(i_processesInPhase3 > 1);
+    printf("USCITA: Rank: %d\n", i_rank);
 }
