@@ -17,7 +17,7 @@
 #define RIGHT 1
 
 /* Grandezza dei singoli blocchi, in modo da avere 2 blocchi in cache. */
-#define BLOCK_SIZE 4096
+#define BLOCK_SIZE 16
 /**/
 #define PARAM_NUMBER 128
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */

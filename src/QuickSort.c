@@ -72,6 +72,8 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator)
 {
+    BOOL check = TRUE;
+
 	int i_splitPoint;
 
 	/*********** FASE UNO ***********/
@@ -239,6 +241,43 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 	}
 	MPI_Barrier(communicator);
 
+    /* Aggiorna gli ultimi blocchi non neutralizzati. */
+    if (lastNeutralizedSide == LEFT)
+    {
+        MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1) + 1, communicator, &reqs[0]);
+    }
+    else if (lastNeutralizedSide == RIGHT)
+    {
+        MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, (i_rank << 1), communicator, &reqs[0]);
+    }
+
+    if (i_rank == 0)
+    {
+        int i;
+        int j = 0;
+        int k = 0;
+        for (i = 0; i < i_totalProcesses; i++)
+        {
+            if (ar_neutralizedSides[i] == BOTH)
+            {
+                j+=2;
+            }
+            else if (ar_neutralizedSides[i] == LEFT)
+            {
+                ++j;
+                MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs0[k]);
+                ++j;
+                ++k;
+            }
+            else
+            {
+                MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, j, communicator, &reqs0[k]);
+                j+=2;
+                ++k;
+            }
+        }
+        MPI_Waitall(k, reqs0, status);
+    }
 
 	/*********** FASE DUE ***********/
 	if (i_rank == 0)
@@ -373,7 +412,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 		}
         i_splitPoint = i_LN;
 	}
-
 	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 
     /*
@@ -392,16 +430,29 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 	return i_splitPoint;
 }
 
-/* SISTEMARE CODICE PER FUNZIONARE CON INPUT NON MULTIPLO DI BLOCK_SIZE. *********************************************************************************************** */
 void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 {
-    int iteration = 1;
-
+    if (i_rank == 0)
+    {
+        int i;
+        for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
+        {
+            int j;
+            for (j = 0; j < BLOCK_SIZE; ++j)
+            {
+                printf("%3d ", ar[(BLOCK_SIZE * i) + j]);
+            }
+            printf("\n");
+        }
+        printf("\n\n");
+    }
+    /*********** FASE TRE ***********/
     int* ar_currentAr = ar;
     int i_currentSize = i_arSize;
     int i_currentRank = i_rank;
     int i_groupSize = i_totalProcesses;
-    int i_processesInPhase3 = i_totalProcesses;
+    //int i_processesInPhase3 = i_totalProcesses;
+    int i_processesInPhase3 = 1;
     int i_rootProcess = 0;
     MPI_Comm communicator;
     MPI_Comm_dup(MPI_COMM_WORLD, &communicator);
@@ -423,6 +474,10 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         if (i_groupSize > 1)
         {
             i_splitPoint = phaseOneTwo(ar_currentAr, i_currentSize, i_currentRank, i_groupSize, communicator);
+            if (i_rank == 0)
+            {
+                printf("Splitpoint: %d\n", i_splitPoint);
+            }
         }
 
         /* Raccolta dei dati aggiornati. */
@@ -497,7 +552,7 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         }
 
         /* Se il processo resta nella fase 3, prepara la prossima iterazione. */
-            /* Creazione del nuovo comunicatore. */
+        /* Creazione del nuovo comunicatore. */
         MPI_Comm newcommunicator;
         MPI_Comm_split(communicator, i_rootProcess, 0, &newcommunicator);
         MPI_Comm_free(&communicator);
@@ -564,7 +619,19 @@ void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         {
             MPI_Wait(&reqContinue, MPI_STATUS_IGNORE);
         }
-        iteration++;
     } while(i_processesInPhase3 > 1);
-    printf("USCITA: Rank: %d\n", i_rank);
+
+    if (i_rank == 0)
+    {
+        int i;
+        for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
+        {
+            int j;
+            for (j = 0; j < BLOCK_SIZE; ++j)
+            {
+                printf("%3d ", ar[(BLOCK_SIZE * i) + j]);
+            }
+            printf("\n");
+        }
+    }
 }

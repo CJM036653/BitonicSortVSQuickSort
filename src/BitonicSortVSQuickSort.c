@@ -10,7 +10,7 @@
 #include "QuickSort.h"
 
 #define MAX_READ_SIZE 16 /* Massima lunghezza di un intero scritto come testo. */
-#define INITIAL_INPUT_SIZE 32768 /* Lunghezza inziale dell'array di input. */
+#define INITIAL_INPUT_SIZE 128 /* Lunghezza inziale dell'array di input. */
 
 #define ALLOCATION_FAILED -1 /* Codice di errore per allocazione fallita. */
 #define S_ALLOCATION_FAILED "Allocazione fallita.\n"
