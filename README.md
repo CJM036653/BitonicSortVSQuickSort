@@ -1,5 +1,5 @@
 # BitonicSortVSQuickSort
-Cartella Latex: Relazione.
+\textbb{Cartella Latex}: Relazione.
 
 Cartella References: Paper di riferimento.
 
