@@ -63,6 +63,7 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 	return RIGHT;
 }
 
+/* IMPLEMENTARE CASO NON POTENZA DI 2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator)
 {
     BOOL check = TRUE;
@@ -124,12 +125,14 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 		}
 
 		i_pivot = (i_min + i_max)/2;
+
+        i_pivot = 803; /*TOGLIERE QUESTA FORZATURA********************************************************************************************************************/
         printf("Pivot: %d\n", i_pivot);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
     ProcessState currentState = ACTIVE;
-	while (i_leftBlock < i_rightBlock)
+	while (i_leftBlock <= i_rightBlock)
 	{
 		MPI_Barrier(communicator);
 		if (i_rank == 0)
@@ -150,7 +153,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         					ar_sndParams[++j] = i_rightBlock;
         					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[1]);
         					i_rightBlock -= BLOCK_SIZE;
-        					ar_remainingBlocks[i] = -1;
         					++j;
         					i_LN += BLOCK_SIZE;
         					i_RN -= BLOCK_SIZE;
@@ -162,13 +164,12 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     				}
     				else if (ar_neutralizedSides[i] == LEFT)
     				{
-                        if (i_leftBlock < i_rightBlock)
+                        if (i_leftBlock <= i_rightBlock)
                         {
         					ar_sndParams[j] = i_leftBlock;
         					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, &reqs[2]);
         					i_leftBlock += BLOCK_SIZE;
-        					ar_remainingBlocks[i] = ar_sndParams[++j];
-        					++j;
+        					j+=2;
         					i_LN += BLOCK_SIZE;
                         }
                         else
@@ -178,9 +179,8 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     				}
     				else
     				{
-                        if (i_leftBlock < i_rightBlock)
+                        if (i_leftBlock <= i_rightBlock)
                         {
-        					ar_remainingBlocks[i] = ar_sndParams[j];
         					ar_sndParams[++j] = i_rightBlock;
         					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[3]);
         					i_rightBlock -= BLOCK_SIZE;
@@ -271,15 +271,18 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
     					++j;
     					++k;
+                        ar_remainingBlocks[i] = -1;
     				}
     				else if (ar_neutralizedSides[i] == LEFT)
     				{
     					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
-    					j+=2;
+                        ar_remainingBlocks[i] = ar_sndParams[++j];
+    					++j;
     					++k;
     				}
     				else
     				{
+                        ar_remainingBlocks[i] = ar_sndParams[j];
     					++j;
     					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
     					++j;
@@ -292,15 +295,18 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     				{
                         ++j;
                         MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
+                        ar_remainingBlocks[i] = ar_sndParams[j];
                         ++j;
                         ++k;
     				}
     				else
     				{
                         MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
+                        ar_remainingBlocks[i] = ar_sndParams[j];
                         j+=2;
                         ++k;
     				}
+                    ar_processStates[i] = INACTIVE;
                 }
 			}
 			MPI_Waitall(k, reqs0, status);
@@ -308,17 +314,46 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 
         if (i_rank == 0)
         {
-            printf("\n\ni_leftBlock = %d, i_rightBlock = %d\n", i_leftBlock, i_rightBlock);
+            printf("ar_sndParams:\n");
+            for (int ciao = 0; ciao < i_totalProcesses*2; ciao++)
+            {
+                printf("%d ", ar_sndParams[ciao]);
+                printf("%d\n", ar_sndParams[++ciao]);
+            }
+
+            printf("ar_remainingBlocks: ");
+            for (int ciao = 0; ciao < i_totalProcesses; ciao++)
+            {
+                printf("%d ", ar_remainingBlocks[ciao]);
+            }
+            printf("\n");
+
+            printf("i_leftBlock = %d, i_rightBlock = %d\n", i_leftBlock, i_rightBlock);
             int i;
             for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
             {
                 int j;
                 for (j = 0; j < BLOCK_SIZE; ++j)
                 {
-                    printf("%3d ", ar[(BLOCK_SIZE * i) + j]);
+                    int newIndex = (BLOCK_SIZE * i) + j;
+                    if (newIndex < i_leftBlock)
+                    {
+                        printf("\033[0;31m");
+                    }
+                    else if (newIndex < i_rightBlock + BLOCK_SIZE)
+                    {
+                        printf("\033[0m");
+                    }
+                    else
+                    {
+                        printf("\033[0;32m");
+                    }
+                    printf("%3d ", ar[newIndex]);
                 }
                 printf("\n");
             }
+            printf("\033[0m");
+            printf("\n\n");
         }
 	}
 	MPI_Barrier(communicator);
@@ -361,10 +396,47 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         MPI_Waitall(k, reqs0, status);
     }
 
+    if (i_rank == 0)
+    {
+        printf("\n\nDOPO AGGIORNAMENTO\n");
+        printf("LN = %d, RN = %d\n", i_LN, i_RN);
+        int i;
+        for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
+        {
+            int j;
+            for (j = 0; j < BLOCK_SIZE; ++j)
+            {
+                int newIndex = (BLOCK_SIZE * i) + j;
+                if (newIndex < i_leftBlock)
+                {
+                    printf("\033[0;31m");
+                }
+                else if (newIndex < i_rightBlock + BLOCK_SIZE)
+                {
+                    printf("\033[0m");
+                }
+                else
+                {
+                    printf("\033[0;32m");
+                }
+                printf("%3d ", ar[newIndex]);
+            }
+            printf("\n");
+        }
+        printf("\033[0m");
+    }
+
 
 	/*********** FASE DUE ***********/
 	if (i_rank == 0)
 	{
+        printf("Pre-ordinamento:\n");
+        for (int ciao = 0; ciao < i_totalProcesses; ciao++)
+        {
+            printf("%d ", ar_remainingBlocks[ciao]);
+        }
+        printf("\n\n");
+
 		/* Ordinamento dell'array ar_remainingBlocks. */
 		int i, temp;
 		for (i = 0; i < i_totalProcesses-1; i++)
@@ -384,6 +456,13 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 			ar_remainingBlocks[i] = i_min;
 			ar_remainingBlocks[i_minIndex] = temp;
 		}
+
+        printf("Post-ordinamento:\n");
+        for (int ciao = 0; ciao < i_totalProcesses; ciao++)
+        {
+            printf("%d ", ar_remainingBlocks[ciao]);
+        }
+        printf("\n\n");
 
 		/* Salta i processori che hanno neutralizzato tutti i blocchi. */
 		i = 0;
