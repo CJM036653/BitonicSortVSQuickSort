@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
 
     MPI_Bcast(&i_inputSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
     /* Avvio di QuickSort. */
-	quickSortManager(ar_quick, i_inputSize, i_rank, i_totalProcesses);
+	ar_quick = quickSortManager(ar_quick, i_inputSize, i_rank, i_totalProcesses);
 
 	if (i_rank == 0)
 	{

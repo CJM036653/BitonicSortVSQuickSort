@@ -22,6 +22,29 @@
 #define PARAM_NUMBER 128
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
 
+typedef enum
+{
+    START_INDEX_TAG = 1,
+    SECTION_LENGTH_TAG,
+    UPDATED_ARRAY_TAG,
+    CONTINUE_TAG,
+    NEW_ARRAY_TAG,
+    ROOT_TAG,
+    PROCESS_STATE_TAG,
+    BLOCK_DISTRIBUTION_TAG_LEFT,
+    BLOCK_DISTRIBUTION_TAG_RIGHT,
+    BLOCK_UPDATE_TAG_LEFT,
+    BLOCK_UPDATE_TAG_RIGHT
+} CommunicationTag;
+
+/* Stato di un processo. */
+typedef enum
+{
+    ACTIVE, /* Processo attivo nell'elaborazione. */
+    OPERATION_PENDING, /* Operazione necessaria (es. consegna dell'output). */
+    INACTIVE /* Processo inattivo. */
+} ProcessState;
+
 /*******************FUNZIONI*******************/
 
 /*
@@ -57,5 +80,5 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot);
 */
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator);
 
-void quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
+int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
 #endif
