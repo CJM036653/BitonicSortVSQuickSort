@@ -1,11 +1,11 @@
 # BitonicSortVSQuickSort
-\texttt{Cartella Latex}: Relazione.
+**Cartella Latex**: Relazione.
 
-Cartella References: Paper di riferimento.
+**Cartella References**: Paper di riferimento.
 
-Cartella bin: File eseguibile.
+**Cartella bin**: File eseguibile.
 
-Cartella src: File sorgenti.
+**Cartella src**: File sorgenti.
 
-Cartella util: File di input e programma per generarli.
+**Cartella util**: File di input e programma per generarli.
 
