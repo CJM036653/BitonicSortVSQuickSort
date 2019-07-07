@@ -13,7 +13,7 @@ static void swap(int* ar, int i_left, int i_right)
 	for (q = 0; q < BLOCK_SIZE; q++)
 	{
 		temp = ar[i_left];
-		ar[i_right] = ar[i_right];
+		ar[i_left] = ar[i_right];
 		ar[i_right] = temp;
 		++i_left;
 		++i_right;
@@ -72,8 +72,8 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 
 	/*********** FASE UNO ***********/
 	int i_LN, i_RN, i_leftBlock, i_rightBlock, i_pivot;
-	i_LN = -BLOCK_SIZE;
-	i_RN = i_arSize + BLOCK_SIZE;
+	i_LN = 0;
+	i_RN = i_arSize;
 	i_leftBlock = 0;
 	i_rightBlock = i_arSize - BLOCK_SIZE;
 
@@ -126,7 +126,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 
 		i_pivot = (i_min + i_max)/2;
 
-        i_pivot = 803; /*TOGLIERE QUESTA FORZATURA********************************************************************************************************************/
+        //i_pivot = 514; /*TOGLIERE QUESTA FORZATURA********************************************************************************************************************/
         printf("Pivot: %d\n", i_pivot);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
@@ -154,8 +154,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[1]);
         					i_rightBlock -= BLOCK_SIZE;
         					++j;
-        					i_LN += BLOCK_SIZE;
-        					i_RN -= BLOCK_SIZE;
                         }
                         else
                         {
@@ -170,7 +168,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, &reqs[2]);
         					i_leftBlock += BLOCK_SIZE;
         					j+=2;
-        					i_LN += BLOCK_SIZE;
                         }
                         else
                         {
@@ -185,7 +182,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[3]);
         					i_rightBlock -= BLOCK_SIZE;
         					++j;
-        					i_RN -= BLOCK_SIZE;
                         }
                         else
                         {
@@ -272,6 +268,8 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     					++j;
     					++k;
                         ar_remainingBlocks[i] = -1;
+                        i_LN += BLOCK_SIZE;
+                        i_RN -= BLOCK_SIZE;
     				}
     				else if (ar_neutralizedSides[i] == LEFT)
     				{
@@ -279,6 +277,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
                         ar_remainingBlocks[i] = ar_sndParams[++j];
     					++j;
     					++k;
+                        i_LN += BLOCK_SIZE;
     				}
     				else
     				{
@@ -287,6 +286,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
     					++j;
     					++k;
+                        i_RN -= BLOCK_SIZE;
     				}
                 }
                 else if (ar_processStates[i] == OPERATION_PENDING)
@@ -528,8 +528,37 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             /* Altrimenti inverti i_swapL e i_swapR e passa al blocco da invertire successivo. */
             else
             {
+                printf("\n\nDOPO SWAP L\n");
+                printf("i_swapL = %d, i_swapR = %d\n", i_swapL, i_swapR);
+
                 swap(ar, i_swapL, i_swapR);
                 i_swapL = ar_remainingBlocks[++i];
+
+                int i;
+                for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
+                {
+                    int j;
+                    for (j = 0; j < BLOCK_SIZE; ++j)
+                    {
+                        int newIndex = (BLOCK_SIZE * i) + j;
+                        if (newIndex < i_leftBlock)
+                        {
+                            printf("\033[0;31m");
+                        }
+                        else if (newIndex < i_rightBlock + BLOCK_SIZE)
+                        {
+                            printf("\033[0m");
+                        }
+                        else
+                        {
+                            printf("\033[0;32m");
+                        }
+                        printf("%3d ", ar[newIndex]);
+                    }
+                    printf("\n");
+                }
+                printf("\033[0m");
+                printf("\n\n");
             }
         }
 
@@ -550,8 +579,37 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             /* Altrimenti inverti i_swapL e i_swapR e passa al blocco da invertire precedente. */
             else
             {
+                printf("\n\nDOPO SWAP R\n");
+                printf("i_swapL = %d, i_swapR = %d\n", i_swapL, i_swapR);
+
                 swap(ar, i_swapL, i_swapR);
                 i_swapR = ar_remainingBlocks[--j];
+
+                int i;
+                for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
+                {
+                    int j;
+                    for (j = 0; j < BLOCK_SIZE; ++j)
+                    {
+                        int newIndex = (BLOCK_SIZE * i) + j;
+                        if (newIndex < i_leftBlock)
+                        {
+                            printf("\033[0;31m");
+                        }
+                        else if (newIndex < i_rightBlock + BLOCK_SIZE)
+                        {
+                            printf("\033[0m");
+                        }
+                        else
+                        {
+                            printf("\033[0;32m");
+                        }
+                        printf("%3d ", ar[newIndex]);
+                    }
+                    printf("\n");
+                }
+                printf("\033[0m");
+                printf("\n\n");
             }
         }
 
@@ -571,27 +629,50 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 				temp = ar[i_LN];
 				ar[i_LN] = ar[i_RN];
 				ar[i_RN] = temp;
-				++i_LN;
-				--i_RN;
 			}
 		}
         i_splitPoint = i_LN;
 	}
-	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 
-    /*
-	if (i_rank == 0)
-	{
-		int i;
-		for (i = 0; i < i_totalProcesses; i++)
-		{
-			printf("RemainingBlock[%d]: %d\n", i, ar_remainingBlocks[i]);
-		}
-		printf("\n");
-		printf("LN: %d, RN: %d\n", i_LN, i_RN);
-		printf("i_splitPoint %d\n", i_splitPoint);
-	}
-    */
+    if (i_rank == 0)
+    {
+        int i;
+        for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
+        {
+            int j;
+            for (j = 0; j < BLOCK_SIZE; ++j)
+            {
+                int nextIndex = (BLOCK_SIZE * i) + j;
+                if (nextIndex < i_splitPoint)
+                {
+                    if (ar[nextIndex] <= i_pivot)
+                    {
+                        printf("\033[0;31m");
+                    }
+                    else
+                    {
+                        printf("\033[0;33m");
+                    }
+                }
+                else
+                {
+                    if (ar[nextIndex] >= i_pivot)
+                    {
+                        printf("\033[0;32m");
+                    }
+                    else
+                    {
+                        printf("\033[0;33m");
+                    }
+                }
+                printf("%3d ", ar[nextIndex]);
+            }
+            printf("\n");
+        }
+        printf("\033[0m");
+    }
+
+	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 	return i_splitPoint;
 }
 
@@ -787,29 +868,5 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             MPI_Wait(&reqContinue, MPI_STATUS_IGNORE);
         }
     } while(i_processesInPhase3 > 1);
-
-    if (i_rank == 0)
-    {
-        printf("\033[0;31m");
-        BOOL check = FALSE;
-        int i;
-        for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
-        {
-            int j;
-            for (j = 0; j < BLOCK_SIZE; ++j)
-            {
-                int nextIndex = (BLOCK_SIZE * i) + j;
-                if (!check && nextIndex == i_splitPoint)
-                {
-                    printf("\033[0;32m");
-                    check = TRUE;
-                }
-                printf("%3d ", ar[nextIndex]);
-            }
-            printf("\n");
-        }
-        printf("\033[0m");
-    }
-
     return ar;
 }
