@@ -168,6 +168,22 @@ int main(int argc, char* argv[])
     /* Avvio di QuickSort. */
 	ar_quick = quickSortManager(ar_quick, i_inputSize, i_rank, i_totalProcesses);
 
+    if (i_rank == 0)
+    {
+        printf("\nRISULTATO:\n");
+        int i;
+        for (i = 0; i < i_inputSize / BLOCK_SIZE; ++i)
+        {
+            int j;
+            for (j = 0; j < BLOCK_SIZE; ++j)
+            {
+                printf("%3d ", ar_quick[(BLOCK_SIZE * i) + j]);
+            }
+            printf("\n");
+        }
+        printf("\n\n");
+    }
+
 	if (i_rank == 0)
 	{
 		free(ar_bitonic);
@@ -177,7 +193,7 @@ int main(int argc, char* argv[])
   	return 0;
 }
 
-
+/********** FUNZIONI **********/
 BOOL checkSorting(int* ar, int i_arSize)
 {
  	int i = 0;
