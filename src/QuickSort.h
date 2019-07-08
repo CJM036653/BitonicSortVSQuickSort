@@ -34,7 +34,9 @@ typedef enum
     BLOCK_DISTRIBUTION_TAG_LEFT,
     BLOCK_DISTRIBUTION_TAG_RIGHT,
     BLOCK_UPDATE_TAG_LEFT,
-    BLOCK_UPDATE_TAG_RIGHT
+    BLOCK_UPDATE_TAG_RIGHT,
+    FINAL_UPDATE_TAG,
+    RANK_TAG
 } CommunicationTag;
 
 /* Stato di un processo. */
@@ -44,6 +46,12 @@ typedef enum
     OPERATION_PENDING, /* Operazione necessaria (es. consegna dell'output). */
     INACTIVE /* Processo inattivo. */
 } ProcessState;
+
+typedef struct
+{
+    int i_rank;
+    BOOL b_continue;
+} ContinueState;
 
 /*******************FUNZIONI*******************/
 
@@ -81,4 +89,6 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot);
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator);
 
 int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
+
+int* quickSort(int* ar, int i_arSize);
 #endif
