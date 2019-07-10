@@ -844,7 +844,7 @@ int Partition(int* ar, int left, int right)
 		}
 	}
 
-	SwapQuik(&ar[i+1], &ar[j])
+	SwapQuik(&ar[i+1], &ar[j]);
 
 return(i++);
 
@@ -876,7 +876,7 @@ int* quickSort(int* ar, int i_arSize)
 			Final[++top] = p - 1;
 
 		}
-		if (p + 1 < endIndex)
+		if (p + 1 < EndIndex)
 		{
 			Final[++top] = p + 1;
 			Final[++top] = EndIndex;
