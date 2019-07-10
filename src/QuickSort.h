@@ -91,4 +91,9 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
 
 int* quickSort(int* ar, int i_arSize);
+
+int Partition(int* ar, int left, int right);
+
+void SwapQuik(int* a, int* b);
+
 #endif
