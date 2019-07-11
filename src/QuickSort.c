@@ -762,6 +762,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
     /*********** FASE QUATTRO ***********/
     printf("Inizio fase sequenziale: i_rank = %d, i_currentSize = %d\n", i_rank, i_currentSize);
     /* Ordinamento sequenziale indipendente per ogni processo. */
+    /*
     if (i_rank == 0)
     {
         int ciao = 0;
@@ -779,9 +780,9 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         }
         printf("\n\n");
     }
-
+    */
     ar_currentAr = quickSort(ar_currentAr, i_currentSize);
-
+    /*
     if (i_rank == 0)
     {
         int ciao = 0;
@@ -799,7 +800,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         }
         printf("\n\n");
     }
-
+    */
     MPI_Request finalRequest;
     if (i_rank != 0)
     {
@@ -830,16 +831,112 @@ int partition(int* ar, int left, int right)
 {
     /* Scelta del pivot. */
     int i_pivot;
-    int i_arSize = right - left;
+    int i_start = left;
+    int i_end = right;
+    int i_arSize = right - left + 1;
     if (i_arSize > 3)
     {
         i_pivot = pivotChoice(ar, i_arSize, left);
     }
     else
     {
-        i_pivot = ar[right];
+        if (i_arSize == 2)
+        {
+            if (ar[left] > ar[right])
+            {
+                int temp = ar[left];
+                ar[left] = ar[right];
+                ar[right] = temp;
+            }
+            return right;
+        }
+        else
+        {
+            int mid = right - 1;
+            int temp;
+            if (ar[left] > ar[mid])
+            {
+                temp = ar[left];
+                ar[left] = ar[mid];
+                ar[mid] = temp;
+            }
+            if (ar[mid] > ar[right])
+            {
+                temp = ar[mid];
+                ar[mid] = ar[right];
+                ar[right] = temp;
+            }
+            if (ar[left] > ar[mid])
+            {
+                temp = ar[left];
+                ar[left] = ar[mid];
+                ar[mid] = temp;
+            }
+            return mid;
+        }
     }
 
+    /*printf("left = %d, right = %d, i_pivot = %d, i_arSize = %d\n", left, right, i_pivot, i_arSize);*/
+    while (left <= right)
+    {
+        if (ar[left] <= i_pivot)
+        {
+            ++left;
+        }
+        else if (ar[right] >= i_pivot)
+        {
+            --right;
+        }
+        else
+        {
+            int temp = ar[left];
+            ar[left] = ar[right];
+            ar[right] = temp;
+            left++;
+            right--;
+        }
+    }
+    /*
+    printf("left = %d\n", left);
+    int ciao = i_start;
+    int ciao2 = 0;
+    while(ciao <= i_end)
+    {
+        if (ciao < left)
+        {
+            if (ar[ciao] <= i_pivot)
+            {
+                printf("\033[0;31m");
+            }
+            else
+            {
+                printf("\033[0;33m");
+            }
+        }
+        else
+        {
+            if (ar[ciao] >= i_pivot)
+            {
+                printf("\033[0;32m");
+            }
+            else
+            {
+                printf("\033[0;33m");
+            }
+        }
+        printf("%3d ", ar[ciao]);
+        ++ciao;
+        ++ciao2;
+        if (ciao2 == BLOCK_SIZE)
+        {
+            ciao2 = 0;
+            printf("\n");
+        }
+    }
+    printf("\033[0m\n\n");
+    */
+    return left;
+    /*
     printf("i_pivot = %d, i_arSize = %d\n", i_pivot, i_arSize);
     i_pivot = ar[right];
     int i = left-1;
@@ -856,7 +953,8 @@ int partition(int* ar, int left, int right)
             ar[j] = temp;
         }
     }
-    return(i);
+    return i;
+    */
 }
 
 
@@ -883,11 +981,13 @@ int* quickSort(int* ar, int i_arSize)
 			final[++top] = startIndex;
 			final[++top] = p - 1;
 		}
-		if (p + 1 < endIndex)
+		if (p < endIndex)
 		{
-			final[++top] = p + 1;
+			final[++top] = p;
 			final[++top] = endIndex;
 		}
 	}
+
+    free(final);
     return ar;
 }
