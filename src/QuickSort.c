@@ -338,7 +338,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     	}
     }
 	MPI_Barrier(communicator);
-    printf("Sono nelle fasi 1/2: %d\n", i_rank);
 
     /* Aggiorna gli ultimi blocchi non neutralizzati. */
     if (lastNeutralizedSide == LEFT)
@@ -376,6 +375,27 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             }
         }
         MPI_Waitall(k, reqs0, status);
+    }
+
+    if (i_rank == 0)
+    {
+        printf("\033[0;31m");
+        printf("FINE FASE 1\n");
+        printf("\033[0m");
+        int i = 0;
+        int j = 0;
+        while (i < i_arSize)
+        {
+            printf("%3d ", ar[i]);
+            ++i;
+            ++j;
+            if (j == BLOCK_SIZE)
+            {
+                j = 0;
+                printf("\n");
+            }
+        }
+        printf("\n");
     }
 
 	/*********** FASE DUE ***********/
@@ -435,6 +455,27 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 			}
 		}
 
+        if (i_rank == 0)
+        {
+            printf("\033[0;31m");
+            printf("BLOCCHI RIMANENTI NEUTRALIZZATI\n");
+            printf("\033[0m");
+            int i = 0;
+            int j = 0;
+            while (i < i_arSize)
+            {
+                printf("%3d ", ar[i]);
+                ++i;
+                ++j;
+                if (j == BLOCK_SIZE)
+                {
+                    j = 0;
+                    printf("\n");
+                }
+            }
+            printf("\n");
+        }
+
 		/* Superato i_LN o i_RN riposiziona i blocchi non neutralizzati
 			 dentro l'intervallo [i_LN, i_RN[. */
         int i_swapL, i_swapR;
@@ -492,7 +533,29 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             }
         }
 
+        if (i_rank == 0)
+        {
+            printf("\033[0;31m");
+            printf("BLOCCHI RIPOSIZIONATI\n");
+            printf("\033[0m");
+            int i = 0;
+            int j = 0;
+            while (i < i_arSize)
+            {
+                printf("%3d ", ar[i]);
+                ++i;
+                ++j;
+                if (j == BLOCK_SIZE)
+                {
+                    j = 0;
+                    printf("\n");
+                }
+            }
+            printf("\n");
+        }
+
 		/* Partizionamento degli elementi rimanenti in base al pivot. */
+        --i_RN;
 		while (i_LN < i_RN)
 		{
 			if (ar[i_LN] <= i_pivot)
@@ -505,9 +568,13 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 			}
 			else
 			{
+                printf("i_LN = %d, i_RN = %d\n", i_LN, i_RN);
+                printf("Inverto %d e %d\n", ar[i_LN], ar[i_RN]);
 				temp = ar[i_LN];
 				ar[i_LN] = ar[i_RN];
 				ar[i_RN] = temp;
+                printf("Invertiti: %d e %d\n", ar[i_LN], ar[i_RN]);
+                printf("\n");
 			}
 		}
         i_splitPoint = i_LN;
@@ -557,6 +624,26 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         printf("\033[0m");
     }
     */
+
+    if (i_rank == 0)
+    {
+        printf("FINE FASI 1 E 2\n");
+        int i = 0;
+        int j = 0;
+        while (i < i_arSize)
+        {
+            printf("%3d ", ar[i]);
+            ++i;
+            ++j;
+            if (j == BLOCK_SIZE)
+            {
+                j = 0;
+                printf("\n");
+            }
+        }
+        printf("\n");
+    }
+
 	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 	return i_splitPoint;
 }
@@ -722,7 +809,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         {
             /* Riceve i root della prossima iterazione. */
             int i;
-            printf("i_processesInPhase3 = %d\n", i_processesInPhase3);
             ++currentChar;
             for (i = 1; i < i_processesInPhase3; ++i)
             {
@@ -759,18 +845,14 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             for (i = 1; i < i_maxIter; ++i)
             {
                 ContinueState st_state;
-                printf("Ricezione stato %d\n", i);
                 MPI_Recv(&st_state, 1, MPI_2INT, MPI_ANY_SOURCE, RANK_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                printf("Stato %d ricevuto.\n", i);
                 if (!st_state.b_continue)
                 {
-                    printf("Invio finale a %d.\n", st_state.i_rank);
                     --i_processesInPhase3;
                     int i_start, i_len;
                     MPI_Recv(&i_start, 1, MPI_INT, st_state.i_rank, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Recv(&i_len, 1, MPI_INT, st_state.i_rank, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Isend(&ar[i_start], i_len, MPI_INT, st_state.i_rank, NEW_ARRAY_TAG, MPI_COMM_WORLD, &lastRequest[i]);
-                    printf("Invio finale a %d COMPLETATO.\n", st_state.i_rank);
                 }
             }
         }
@@ -779,8 +861,8 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
     /*********** FASE QUATTRO ***********/
     printf("i_startIndex = %d, i_currentSize = %d, i_rank = %d\n", i_startIndex, i_currentSize, i_rank);
-    /*ar_currentAr = quickSort(ar_currentAr, i_currentSize);*/
-    /*
+    ar_currentAr = quickSort(ar_currentAr, i_currentSize);
+
     MPI_Request finalRequest;
     if (i_rank != 0)
     {
@@ -802,13 +884,13 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         }
         MPI_Waitall(i_totalProcesses-1, &finalRequests[1], MPI_STATUS_IGNORE);
     }
-    */
+
 
     return ar;
 }
 
 
-void SwapQuik(int* a, int* b)
+void swapQuik(int* a, int* b)
 {
 	int temp = *a;
 	*a = *b;
@@ -816,64 +898,55 @@ void SwapQuik(int* a, int* b)
 }
 
 
-
-
-int Partition(int* ar, int left, int right)
+int partition(int* ar, int left, int right)
 {
 	int x = ar[right];
 	int i = left-1;
 	int j;
-
 
 	for(j=left; j<= right; ++j)
 	{
 		if(ar[j] <= x)
 		{
 			i++;
-			SwapQuik(&ar[i],&ar[j]);
+			swapQuik(&ar[i],&ar[j]);
 		}
 	}
 
-	SwapQuik(&ar[i+1], &ar[j]);
-
-return(i++);
-
+	swapQuik(&ar[i+1], &ar[j]);
+    return(i++);
 }
-
 
 
 int* quickSort(int* ar, int i_arSize)
 {
-	int StartIndex = 0;
-	int EndIndex = i_arSize-1;
+	int startIndex = 0;
+	int endIndex = i_arSize-1;
 	int top = -1;
 
-	int* Final = malloc(sizeof(int) * i_arSize);
+	int* final = malloc(sizeof(int) * i_arSize);
 
-	Final[++top] = StartIndex;
-	Final[++top] = EndIndex;
+	final[++top] = startIndex;
+	final[++top] = endIndex;
 
 	while (top >=0)
 	{
-		EndIndex = Final[top--];
-		StartIndex = Final[top--];
+		endIndex = final[top--];
+		startIndex = final[top--];
 
-		int p = Partition(ar, StartIndex, EndIndex);
+		int p = partition(ar, startIndex, endIndex);
 
-		if(p-1 > StartIndex)
+		if(p-1 > startIndex)
 		{
-			Final[++top] = StartIndex;
-			Final[++top] = p - 1;
+			final[++top] = startIndex;
+			final[++top] = p - 1;
 
 		}
-		if (p + 1 < EndIndex)
+		if (p + 1 < endIndex)
 		{
-			Final[++top] = p + 1;
-			Final[++top] = EndIndex;
+			final[++top] = p + 1;
+			final[++top] = endIndex;
 		}
-
-
 	}
-
     return ar;
 }
