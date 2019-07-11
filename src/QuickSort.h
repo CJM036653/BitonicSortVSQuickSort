@@ -94,6 +94,4 @@ int* quickSort(int* ar, int i_arSize);
 
 int partition(int* ar, int left, int right);
 
-void swapQuik(int* a, int* b);
-
 #endif

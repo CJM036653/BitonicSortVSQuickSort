@@ -182,6 +182,9 @@ int main(int argc, char* argv[])
             printf("\n");
         }
         printf("\n\n");
+
+        BOOL check = checkSorting(ar_quick, i_inputSize);
+        printf("ar_quick ordinato? %d\n", check);
     }
 
 	if (i_rank == 0)

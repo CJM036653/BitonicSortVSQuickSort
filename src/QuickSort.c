@@ -135,10 +135,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 		}
 
 		i_pivot = (i_min + i_max)/2;
-
-        /*TOGLIERE QUESTA FORZATURA********************************************************************************************************************/
-        /*i_pivot = 224;*/
-        /*printf("Pivot: %d\n", i_pivot);*/
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
@@ -213,13 +209,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     		MPI_Bcast(&i_leftBlock, 1, MPI_INT, 0, communicator);
     		MPI_Bcast(&i_rightBlock, 1, MPI_INT, 0, communicator);
             MPI_Recv(&currentState, 1, MPI_INT, 0, PROCESS_STATE_TAG, communicator, MPI_STATUS_IGNORE);
-            if (i_rank == 0)
-            {
-                printf("Sono qui, siamo in %d processi.\n", i_totalProcesses);
-                printf("i_leftBlock = %d, i_rightBlock = %d\n", i_leftBlock, i_rightBlock);
-                printf("i_arSize = %d\n", i_arSize);
-                printf("remainder = %d\n", remainder);
-            }
 
             if (currentState == ACTIVE)
             {
@@ -377,27 +366,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         MPI_Waitall(k, reqs0, status);
     }
 
-    if (i_rank == 0)
-    {
-        printf("\033[0;31m");
-        printf("FINE FASE 1\n");
-        printf("\033[0m");
-        int i = 0;
-        int j = 0;
-        while (i < i_arSize)
-        {
-            printf("%3d ", ar[i]);
-            ++i;
-            ++j;
-            if (j == BLOCK_SIZE)
-            {
-                j = 0;
-                printf("\n");
-            }
-        }
-        printf("\n");
-    }
-
 	/*********** FASE DUE ***********/
 	if (i_rank == 0)
 	{
@@ -454,27 +422,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 				--j;
 			}
 		}
-
-        if (i_rank == 0)
-        {
-            printf("\033[0;31m");
-            printf("BLOCCHI RIMANENTI NEUTRALIZZATI\n");
-            printf("\033[0m");
-            int i = 0;
-            int j = 0;
-            while (i < i_arSize)
-            {
-                printf("%3d ", ar[i]);
-                ++i;
-                ++j;
-                if (j == BLOCK_SIZE)
-                {
-                    j = 0;
-                    printf("\n");
-                }
-            }
-            printf("\n");
-        }
 
 		/* Superato i_LN o i_RN riposiziona i blocchi non neutralizzati
 			 dentro l'intervallo [i_LN, i_RN[. */
@@ -533,27 +480,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             }
         }
 
-        if (i_rank == 0)
-        {
-            printf("\033[0;31m");
-            printf("BLOCCHI RIPOSIZIONATI\n");
-            printf("\033[0m");
-            int i = 0;
-            int j = 0;
-            while (i < i_arSize)
-            {
-                printf("%3d ", ar[i]);
-                ++i;
-                ++j;
-                if (j == BLOCK_SIZE)
-                {
-                    j = 0;
-                    printf("\n");
-                }
-            }
-            printf("\n");
-        }
-
 		/* Partizionamento degli elementi rimanenti in base al pivot. */
         --i_RN;
 		while (i_LN < i_RN)
@@ -568,81 +494,13 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 			}
 			else
 			{
-                printf("i_LN = %d, i_RN = %d\n", i_LN, i_RN);
-                printf("Inverto %d e %d\n", ar[i_LN], ar[i_RN]);
 				temp = ar[i_LN];
 				ar[i_LN] = ar[i_RN];
 				ar[i_RN] = temp;
-                printf("Invertiti: %d e %d\n", ar[i_LN], ar[i_RN]);
-                printf("\n");
 			}
 		}
         i_splitPoint = i_LN;
 	}
-    /*
-    if (i_rank == 0)
-    {
-        int nextIndex;
-        int i;
-        for (i = 0; i < i_arSize / BLOCK_SIZE; ++i)
-        {
-            int j;
-            for (j = 0; j < BLOCK_SIZE; ++j)
-            {
-                nextIndex = (BLOCK_SIZE * i) + j;
-                if (nextIndex < i_splitPoint)
-                {
-                    if (ar[nextIndex] <= i_pivot)
-                    {
-                        printf("\033[0;31m");
-                    }
-                    else
-                    {
-                        printf("\033[0;33m");
-                    }
-                }
-                else
-                {
-                    if (ar[nextIndex] >= i_pivot)
-                    {
-                        printf("\033[0;32m");
-                    }
-                    else
-                    {
-                        printf("\033[0;33m");
-                    }
-                }
-                printf("%3d ", ar[nextIndex]);
-            }
-            printf("\n");
-        }
-        for (++nextIndex; nextIndex < i_arSize; nextIndex++)
-        {
-            printf("%d ", ar[nextIndex]);
-        }
-        printf("\n");
-        printf("\033[0m");
-    }
-    */
-
-    if (i_rank == 0)
-    {
-        printf("FINE FASI 1 E 2\n");
-        int i = 0;
-        int j = 0;
-        while (i < i_arSize)
-        {
-            printf("%3d ", ar[i]);
-            ++i;
-            ++j;
-            if (j == BLOCK_SIZE)
-            {
-                j = 0;
-                printf("\n");
-            }
-        }
-        printf("\n");
-    }
 
 	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 	return i_splitPoint;
@@ -861,7 +719,10 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
     /*********** FASE QUATTRO ***********/
     printf("i_startIndex = %d, i_currentSize = %d, i_rank = %d\n", i_startIndex, i_currentSize, i_rank);
-    ar_currentAr = quickSort(ar_currentAr, i_currentSize);
+    if (i_rank == 0)
+    {
+        ar_currentAr = quickSort(ar_currentAr, i_currentSize);
+    }
 
     MPI_Request finalRequest;
     if (i_rank != 0)
@@ -877,44 +738,43 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         MPI_Request finalRequests[MAX_PROCESSORS];
         for (i = 1; i < i_totalProcesses; ++i)
         {
+            printf("Ricevo %d\n", i_rank);
             int i_start, i_len;
             MPI_Recv(&i_start, 1, MPI_INT, i, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            printf("Ricevuto %d\n", i_rank);
             MPI_Irecv(&ar[i_start], i_len, MPI_INT, i, FINAL_UPDATE_TAG, MPI_COMM_WORLD, &finalRequests[i]);
         }
         MPI_Waitall(i_totalProcesses-1, &finalRequests[1], MPI_STATUS_IGNORE);
     }
 
-
     return ar;
-}
-
-
-void swapQuik(int* a, int* b)
-{
-	int temp = *a;
-	*a = *b;
-	*b = temp;
 }
 
 
 int partition(int* ar, int left, int right)
 {
-	int x = ar[right];
+	int x = ar[right]; /* Pivot. Aggiungere funzione di scelta anche per sopra. ***************************************************************************************/
 	int i = left-1;
 	int j;
+    int temp;
 
-	for(j=left; j<= right; ++j)
+	for(j = left; j <= right; ++j)
 	{
 		if(ar[j] <= x)
 		{
-			i++;
-			swapQuik(&ar[i],&ar[j]);
+			++i;
+            temp = ar[i];
+            ar[i] = ar[j];
+            ar[j] = temp;
 		}
 	}
 
-	swapQuik(&ar[i+1], &ar[j]);
-    return(i++);
+    ++i;
+    temp = ar[i];
+    ar[i] = ar[j];
+    ar[j] = temp;
+    return(i);
 }
 
 
@@ -929,14 +789,16 @@ int* quickSort(int* ar, int i_arSize)
 	final[++top] = startIndex;
 	final[++top] = endIndex;
 
-	while (top >=0)
+	while (top >= 0)
 	{
 		endIndex = final[top--];
 		startIndex = final[top--];
+        printf("startIndex = %d, endIndex = %d\n", startIndex, endIndex);
 
 		int p = partition(ar, startIndex, endIndex);
+        printf("p = %d\n", p);
 
-		if(p-1 > startIndex)
+		if (p-1 > startIndex)
 		{
 			final[++top] = startIndex;
 			final[++top] = p - 1;
