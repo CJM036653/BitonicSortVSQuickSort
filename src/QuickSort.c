@@ -812,7 +812,73 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
     return ar;
 }
 
+
+void SwapQuik(int* a, int* b)
+{
+	int temp = *a;
+	*a = *b;
+	*b = temp;
+}
+
+
+
+
+int Partition(int* ar, int left, int right)
+{
+	int x = ar[right];
+	int i = left-1;
+	int j;
+
+
+	for(j=left; j<= right; ++j)
+	{
+		if(ar[j] <= x)
+		{
+			i++;
+			SwapQuik(&ar[i],&ar[j]);
+		}
+	}
+
+	SwapQuik(&ar[i+1], &ar[j]);
+
+return(i++);
+
+}
+
+
+
 int* quickSort(int* ar, int i_arSize)
 {
+	int StartIndex = 0;
+	int EndIndex = i_arSize-1;
+	int top = -1;
+
+	int* Final = malloc(sizeof(int) * i_arSize);
+
+	Final[++top] = StartIndex;
+	Final[++top] = EndIndex;
+
+	while (top >=0)
+	{
+		EndIndex = Final[top--];
+		StartIndex = Final[top--];
+
+		int p = Partition(ar, StartIndex, EndIndex);
+
+		if(p-1 > StartIndex)
+		{
+			Final[++top] = StartIndex;
+			Final[++top] = p - 1;
+
+		}
+		if (p + 1 < EndIndex)
+		{
+			Final[++top] = p + 1;
+			Final[++top] = EndIndex;
+		}
+
+
+	}
+
     return ar;
 }
