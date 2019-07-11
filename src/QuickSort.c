@@ -338,6 +338,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 		}
 	}
 	MPI_Barrier(communicator);
+    printf("Sono nelle fasi 1/2: %d\n", i_rank);
 
     /* Aggiorna gli ultimi blocchi non neutralizzati. */
     if (lastNeutralizedSide == LEFT)
@@ -376,7 +377,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         }
         MPI_Waitall(k, reqs0, status);
     }
-
 
 	/*********** FASE DUE ***********/
 	if (i_rank == 0)
@@ -557,7 +557,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         printf("\033[0m");
     }
     */
-
 	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
 	return i_splitPoint;
 }
@@ -605,10 +604,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         if (i_groupSize > 1)
         {
             i_splitPoint = phaseOneTwo(ar_currentAr, i_currentSize, i_currentRank, i_groupSize, communicator);
-            if (i_rank == 0)
-            {
-                printf("Splitpoint: %d\n", i_splitPoint);
-            }
+            printf("Splitpoint: %d, i_rank: %d\n", i_splitPoint, i_rank);
         }
 
         /* Raccolta dei dati aggiornati. */
@@ -762,7 +758,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         /* Il processo 0 aggiorna il conto di quanti processi sono ancora nella fase 3. */
         if (i_rank == 0)
         {
-            printf("CIAO***********************************************************************************\n");
             int i;
             int i_maxIter = i_processesInPhase3;
             MPI_Request lastRequest[MAX_PROCESSORS];
