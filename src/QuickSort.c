@@ -5,6 +5,20 @@
 #include <stdio.h>
 #include <time.h>
 #include <mpi.h>
+#include <math.h>
+
+/* Dealloca le risorse. */
+static void freeMemory(void* ar1, void* ar2, void* ar3, void* ar4, void* ar5, void* ar6, void* ar7, void* ar8)
+{
+    free(ar1);
+    free(ar2);
+    free(ar3);
+    free(ar4);
+    free(ar5);
+    free(ar6);
+    free(ar7);
+    free(ar8);
+}
 
 /* Inverte due blocchi di grandezza BLOCK_SIZE. */
 static void swap(int* ar, int i_left, int i_right)
@@ -18,6 +32,31 @@ static void swap(int* ar, int i_left, int i_right)
 		++i_left;
 		++i_right;
 	}
+}
+
+/* Scelta del pivot. */
+static int pivotChoice(int* ar, int i_arSize, int i_offset)
+{
+    int i_1, i_2, i_3, i_min, i_max;
+    i_1 = (rand() % i_arSize) + i_offset;
+    i_2 = (rand() % i_arSize) + i_offset;
+    i_3 = (rand() % i_arSize) + i_offset;
+    i_1 = ar[i_1];
+    i_2 = ar[i_2];
+    i_3 = ar[i_3];
+
+    if (i_1 > i_2)
+    {
+        i_max = (i_1 > i_3 ? i_1 : i_3);
+        i_min = (i_2 < i_3 ? i_2 : i_3);
+    }
+    else
+    {
+        i_max = (i_2 > i_3 ? i_2 : i_3);
+        i_min = (i_1 < i_3 ? i_1 : i_3);
+    }
+
+    return (i_min + i_max)/2;
 }
 
 SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
@@ -65,23 +104,24 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator)
 {
-    int i_splitPoint;
+    int i_splitPoint; /* Soglia tra gli elementi minori o uguali del pivot e quelli maggiori o uguali.*/
 
 	/*********** FASE UNO ***********/
 	int i_LN, i_RN, i_leftBlock, i_rightBlock, i_pivot;
-	i_LN = 0;
-	i_RN = i_arSize;
-	i_leftBlock = 0;
-	i_rightBlock = i_arSize - BLOCK_SIZE;
+	i_LN = 0; /* Indice che contiene l'inizio dell'area centrale non neutralizzata. */
+	i_RN = i_arSize; /* Indice che contiene il primo elemento fuori dall'area centrale non neutralizzata. */
+	i_leftBlock = 0; /* Prossimo blocco sinistro da neutralizzare. */
+	i_rightBlock = i_arSize - BLOCK_SIZE; /* Prossimo blocco destro da neutralizzare. */
 
-	int ar_left[BLOCK_SIZE];
-	int ar_right[BLOCK_SIZE];
-	SIDE lastNeutralizedSide = BOTH;
+	int ar_left[BLOCK_SIZE]; /* Blocco sinistro da neutralizzare. */
+	int ar_right[BLOCK_SIZE]; /* Blocco destro da neutralizzare. */
+	SIDE lastNeutralizedSide = BOTH; /* Ultimo lato neutralizzato. BOTH assicura che vengano assegnati due blocchi nuovi. */
 
-	int* ar_remainingBlocks = NULL;
-	SIDE* ar_neutralizedSides = NULL;
-	int* ar_sndParams = NULL;
-    ProcessState* ar_processStates = NULL;
+    /* Array utilizzati dal root per la gestione dell'elaborazione. */
+	int* ar_remainingBlocks = NULL; /* Indici dei blocchi non neutralizzati per ogni processo. */
+	SIDE* ar_neutralizedSides = NULL; /* Ultimi blocchi neutralizzati dai processi. */
+	int* ar_sndParams = NULL; /* Indici dei blocchi inviati ad ogni processo. */
+    ProcessState* ar_processStates = NULL; /* Stati dei processi. */
 
 	MPI_Request reqs[4];
 	MPI_Request* reqs0;
@@ -90,58 +130,55 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 
 	if (i_rank == 0)
 	{
+        /* Inizializza ar_remainingBlocks a indici non validi. */
         int i;
 		ar_remainingBlocks = malloc(sizeof(int) * i_totalProcesses);
+        if (ar_remainingBlocks == NULL) MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED_ERR);
         for(i = 0; i < i_totalProcesses; ++i)
         {
             ar_remainingBlocks[i] = -1;
         }
 
-		/* Inizializza a zero in modo che alla prima iterazione vengano dati due blocchi a ogni processore. */
+		/* Inizializza a zero in modo che alla prima iterazione vengano dati due blocchi a ogni processo. */
 		ar_neutralizedSides = calloc(i_totalProcesses, sizeof(SIDE));
-        int i_sndParams = i_totalProcesses << 1;
 
+        /* Inizializza ar_sndParams a indici non validi. */
+        int i_sndParams = i_totalProcesses << 1;
 		ar_sndParams = malloc(sizeof(int) * i_sndParams);
+        if (ar_sndParams == NULL)
+        {
+            freeMemory(ar, ar_remainingBlocks, ar_neutralizedSides, ar_sndParams, ar_processStates, reqs0, reqProcState, status);
+            MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED_ERR);
+        }
         for(i = 0; i < i_sndParams; ++i)
         {
             ar_sndParams[i] = -1;
         }
 
+        /* Inizializza ar_processStates ad ACTIVE. */
         ar_processStates = calloc(sizeof(ProcessState), i_totalProcesses);
 
+        /* Alloca le richieste di comunicazione. */
 		reqs0 = malloc(sizeof(MPI_Request) * (i_totalProcesses << 1));
         reqProcState = malloc(sizeof(MPI_Request) * i_totalProcesses);
 		status = malloc(sizeof(MPI_Status) * (i_totalProcesses << 1));
 
-		/* Scelta del pivot. */
-		srand(time(NULL));
-		int i_1, i_2, i_3, i_min, i_max;
-		i_1 = rand() % i_arSize;
-		i_2 = rand() % i_arSize;
-		i_3 = rand() % i_arSize;
-		i_1 = ar[i_1];
-		i_2 = ar[i_2];
-		i_3 = ar[i_3];
+        /* Controllo sulle allocazioni. */
+        if (ar_neutralizedSides == NULL || ar_processStates == NULL || reqs0 == NULL || reqProcState == NULL || status == NULL)
+        {
+            freeMemory(ar, ar_remainingBlocks, ar_neutralizedSides, ar_sndParams, ar_processStates, reqs0, reqProcState, status);
+            MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED_ERR);
+        }
 
-		if (i_1 > i_2)
-		{
-			i_max = (i_1 > i_3 ? i_1 : i_3);
-			i_min = (i_2 < i_3 ? i_2 : i_3);
-		}
-		else
-		{
-			i_max = (i_2 > i_3 ? i_2 : i_3);
-			i_min = (i_1 < i_3 ? i_1 : i_3);
-		}
-
-		i_pivot = (i_min + i_max)/2;
+		i_pivot = pivotChoice(ar, i_arSize, 0);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
+    /* Tutti i processi sono attualmente attivi. */
     ProcessState currentState = ACTIVE;
-    int remainder = i_arSize % BLOCK_SIZE;
-    int i_activeProcesses = i_totalProcesses;
-    /* Se sono disponibili almeno 2 blocchi procedi con la suddivisione. */
+    int remainder = i_arSize % BLOCK_SIZE; /* Numero di elementi in eccesso ai blocchi. */
+
+    /* Se sono disponibili almeno 2 blocchi procedi con la fase 1. */
     if (i_leftBlock < i_rightBlock - remainder)
     {
     	while (i_leftBlock <= i_rightBlock - remainder)
@@ -151,7 +188,9 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     		{
     			int i, j;
     			j = 0;
-    			for (i = 0; i < i_totalProcesses; i++)
+                /* Invia a tutti i processi attivi i prossimi blocchi da neutralizzare.
+                   Se non e' possibile inviare altri blocchi, il processo viene etichettato come INACTIVE o OPERATION_PENDING. */
+    			for (i = 0; i < i_totalProcesses; ++i)
     			{
                     if (ar_processStates[i] == ACTIVE)
                     {
@@ -170,7 +209,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
                             else
                             {
                                 ar_processStates[i] = INACTIVE;
-                                --i_activeProcesses;
                             }
         				}
         				else if (ar_neutralizedSides[i] == LEFT)
@@ -206,13 +244,15 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
                     MPI_Isend(&ar_processStates[i], 1, MPI_INT, i, PROCESS_STATE_TAG, communicator, &reqProcState[i]);
     			}
     		}
+            /* Sincronizza le variabili di controllo del ciclo e ricevi lo stato aggiornato. */
     		MPI_Bcast(&i_leftBlock, 1, MPI_INT, 0, communicator);
     		MPI_Bcast(&i_rightBlock, 1, MPI_INT, 0, communicator);
             MPI_Recv(&currentState, 1, MPI_INT, 0, PROCESS_STATE_TAG, communicator, MPI_STATUS_IGNORE);
 
+            /* I processi attivi ricevono i blocchi da neutralizzare. */
             if (currentState == ACTIVE)
             {
-                /* Ricezione dei nuovi blocchi da neutralizzare. */
+                /* Ricezione. */
             	if (lastNeutralizedSide == BOTH)
             	{
             		MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, MPI_STATUS_IGNORE);
@@ -233,7 +273,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             /* Raccolta dei risultati. */
     		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, 1, MPI_INT, 0, communicator);
 
-            /* Aggiornamento dei blocchi appena neutralizzati. */
+            /* Invia i blocchi appena neutralizzati. */
             if (currentState == ACTIVE)
             {
         		if (lastNeutralizedSide == BOTH)
@@ -250,7 +290,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[0]);
         		}
             }
-            /* Aggiornamento dei blocchi non neutralizzati dei processi in disattivazione. */
+            /* Invia i blocchi non neutralizzati dei processi in disattivazione. */
             else if (currentState == OPERATION_PENDING)
             {
                 if (lastNeutralizedSide == LEFT)
@@ -263,6 +303,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         		}
             }
 
+            /* Il processo root riceve tutti i dati inviati precedentemente. */
     		if (i_rank == 0)
     		{
     			int i;
@@ -366,10 +407,11 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         MPI_Waitall(k, reqs0, status);
     }
 
+
 	/*********** FASE DUE ***********/
 	if (i_rank == 0)
 	{
-		/* Ordinamento dell'array ar_remainingBlocks. */
+		/* Ordinamento dell'array ar_remainingBlocks tramite selection sort. */
 		int i, temp;
 		for (i = 0; i < i_totalProcesses-1; i++)
 		{
@@ -500,6 +542,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 			}
 		}
         i_splitPoint = i_LN;
+        freeMemory(NULL, ar_remainingBlocks, ar_neutralizedSides, ar_sndParams, ar_processStates, reqs0, reqProcState, status);
 	}
 
 	MPI_Bcast(&i_splitPoint, 1, MPI_INT, 0, communicator);
@@ -509,17 +552,22 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 {
     /*********** FASE TRE ***********/
-    int* ar_currentAr = ar;
-    int i_currentSize = i_arSize;
-    int i_currentRank = i_rank;
-    int i_groupSize = i_totalProcesses;
-    int i_processesInPhase3 = i_totalProcesses;
-    int i_rootProcess = 0;
+    int* ar_currentAr = ar; /* Array assegnato a questo processo. */
+    int i_currentSize = i_arSize; /* Grandezza di ar_currentAr. */
+    int i_currentRank = i_rank; /* Rango del processo nel comunicatore parziale. */
+    int i_groupSize = i_totalProcesses; /* Numero di processi nel comunicatore parziale. */
+    int i_processesInPhase3 = i_totalProcesses; /* Numero di processi nella fase 3. */
+    int i_rootProcess = 0; /* Root del comunicatore parziale rispetto a MPI_COMM_WORLD. */
+
+    /* Comunicatore parziale, inizialmente corrispondente a MPI_COMM_WORLD. */
     MPI_Comm communicator;
     MPI_Comm_dup(MPI_COMM_WORLD, &communicator);
-    char currentChar = 'a';
-    int i_startIndex = 0; /* Indice di partenza della sezione considerata da un processo. */
-    int i_splitPoint;
+
+    char currentChar = 'a'; /* Carattere che identifica i root dell'iterazione corrente. */
+    int i_startIndex = 0; /* Indice assoluto di partenza della sezione considerata da un processo. */
+    int i_splitPoint; /* Split point corrente. */
+
+    /* Stato attuale del processo. Inizialmente tutti procedono con la fase 3. */
     ContinueState st_currentState;
     st_currentState.i_rank = i_rank;
     st_currentState.b_continue = TRUE;
@@ -527,20 +575,21 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
     /* Richieste di invio. */
     MPI_Request sndReq0, sndReq1, sndReq2, sndReq3, sndReq4, sndReq5, sndReq6, sndReq7, sndReq8, sndReq9, sndReq10, sndReq11, sndReq12;
 
-    /* Array che tiene conto di quali processori sono i root dell'iterazione corrente. */
+    /* Array che tiene conto di quali processi sono i root dell'iterazione corrente. */
     char* ar_rootIndices = NULL;
 	if (i_rank == 0)
 	{
+        srand(time(NULL));
 		ar_rootIndices = calloc(i_totalProcesses, sizeof(char));
+        if (ar_rootIndices == NULL)
+        {
+            free(ar);
+            MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED_ERR);
+        }
 	}
 
-    int iterazion = 0;
     do
     {
-        if (i_rank == 0)
-        {
-            printf("\n***************ITERAZIONE %d*******************\n", iterazion++);
-        }
         /* Esegui fasi 1 e 2. */
         if (i_groupSize > 1)
         {
@@ -574,7 +623,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         {
             int i_L1 = i_splitPoint; /* Grandezza del blocco di sinistra. */
     		int i_L2 = i_currentSize - i_L1; /* Grandezza del blocco di destra. */
-    		int i_P2 = (i_L2 * i_groupSize)/i_currentSize; /* Numero di processi della parte di destra. */
+    		int i_P2 = round((i_L2 * i_groupSize)/i_currentSize); /* Numero di processi della parte di destra. */
             if (i_P2 == 0)
             {
                 i_P2 = 1;
@@ -608,7 +657,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             st_currentState.b_continue = FALSE;
             i_processesInPhase3 = 1;
         }
-
         MPI_Isend(&(st_currentState.b_continue), 1, MPI_INT, 0, CONTINUE_TAG, MPI_COMM_WORLD, &sndReq3);
 
         /* Se il processo resta nella fase 3, prepara la prossima iterazione. */
@@ -619,6 +667,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         communicator = newcommunicator;
         MPI_Comm_rank(communicator, &i_currentRank);
 
+        /* I root e i processi in uscita devono allocare lo spazio per il prossimo array. */
         if (i_rank != 0 && ((st_currentState.b_continue && i_rank == i_rootProcess) || !st_currentState.b_continue))
         {
             free(ar_currentAr);
@@ -630,7 +679,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             }
         }
 
-        /* Comunica al processo 0 i root della prossima iterazione. */
+        /* Comunica al processo 0 root, processi in uscita e worker della prossima iterazione. */
         if (i_rank != 0)
         {
             MPI_Isend(&st_currentState, 1, MPI_2INT, 0, RANK_TAG, MPI_COMM_WORLD, &sndReq12);
@@ -711,7 +760,45 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 
     /*********** FASE QUATTRO ***********/
+    printf("Inizio fase sequenziale: i_rank = %d, i_currentSize = %d\n", i_rank, i_currentSize);
+    /* Ordinamento sequenziale indipendente per ogni processo. */
+    if (i_rank == 0)
+    {
+        int ciao = 0;
+        int ciao2 = 0;
+        while(ciao < i_arSize)
+        {
+            printf("%3d ", ar[ciao]);
+            ++ciao;
+            ++ciao2;
+            if (ciao2 == BLOCK_SIZE)
+            {
+                ciao2 = 0;
+                printf("\n");
+            }
+        }
+        printf("\n\n");
+    }
+
     ar_currentAr = quickSort(ar_currentAr, i_currentSize);
+
+    if (i_rank == 0)
+    {
+        int ciao = 0;
+        int ciao2 = 0;
+        while(ciao < i_arSize)
+        {
+            printf("%3d ", ar[ciao]);
+            ++ciao;
+            ++ciao2;
+            if (ciao2 == BLOCK_SIZE)
+            {
+                ciao2 = 0;
+                printf("\n");
+            }
+        }
+        printf("\n\n");
+    }
 
     MPI_Request finalRequest;
     if (i_rank != 0)
@@ -741,14 +828,27 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 int partition(int* ar, int left, int right)
 {
-    int x = ar[right]; /* Pivot. Aggiungere funzione di scelta anche per sopra. ***************************************************************************************/
+    /* Scelta del pivot. */
+    int i_pivot;
+    int i_arSize = right - left;
+    if (i_arSize > 3)
+    {
+        i_pivot = pivotChoice(ar, i_arSize, left);
+    }
+    else
+    {
+        i_pivot = ar[right];
+    }
+
+    printf("i_pivot = %d, i_arSize = %d\n", i_pivot, i_arSize);
+    i_pivot = ar[right];
     int i = left-1;
     int j;
     int temp;
 
     for(j = left; j <= right; ++j)
     {
-        if(ar[j] <= x)
+        if(ar[j] <= i_pivot)
         {
             ++i;
             temp = ar[i];

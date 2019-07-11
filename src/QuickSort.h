@@ -17,8 +17,10 @@
 #define BOTH 0
 #define RIGHT 1
 
-#define BLOCK_SIZE 4092 /* Grandezza dei singoli blocchi. */
+#define BLOCK_SIZE 16 /* Grandezza dei singoli blocchi. */
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
+
+#define ALLOCATION_FAILED_ERR -1
 
 /* Tag di comunicazione. */
 typedef enum
@@ -75,22 +77,73 @@ typedef struct
 SIDE neutralize(int* ar_left, int* ar_right, int i_pivot);
 
 /*
-	Fase 3 dell'algoritmo, richiama iterativamente le fasi 1 e 2.
+	Funzione che contiene le fasi 1 e 2 dell'algoritmo.
 
-	***Parametri***
+	*** Parametri ***
 		int* ar
 			Puntatore all'array di input.
 		int i_arSize
 			Numero di elementi di ar.
+        int i_rank
+            Rango del processo.
 		int i_totalProcesses
 			Numero di processi attivi.
+        MPI_Comm communicator
+            Comunicatore del gruppo di processi corrente.
+
+    *** Restituzione ***
+        Indice dello split point. A sinistra rimangono tutti gli elementi minori o uguali del pivot, a destra tutti
+        quelli maggiori o uguali.
 */
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator);
 
+/*
+    Funzione che contiene le fasi 3 e 4 dell'algoritmo.
+    Richiama iterativamente phaseOneTwo(...).
+
+    *** Parametri ***
+        int* ar
+            Puntatore all'array di input.
+        int i_arSize
+            Numero di elementi di ar.
+        int i_rank
+            Rango del processo.
+        int i_totalProcesses
+            Numero di processi attivi.
+
+    *** Restituzione ***
+        Puntatore all'array ordinato.
+*/
 int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses);
 
+/*
+    Quicksort sequenziale, utilizzato nella fase 4.
+
+    *** Parametri ***
+        int* ar
+            Puntatore all'array di input.
+        int i_arSize
+            Numero di elementi di ar.
+
+    *** Restituzione ***
+        Puntatore all'array ordinato.
+*/
 int* quickSort(int* ar, int i_arSize);
 
-int partition(int* ar, int left, int right);
+/*
+    Fase Divide del quicksort: scelto un pivot sposta gli elementi minori alla sua sinistra e quelli maggiori alla sua
+    destra
 
+    *** Parametri ***
+        int* ar
+            Puntatore all'array di input.
+        int left
+            Primo indice da considerare.
+        int right
+            Ultimo indice da considerare.
+
+    *** Restituzione ***
+        Indice del pivot.
+*/
+int partition(int* ar, int left, int right);
 #endif
