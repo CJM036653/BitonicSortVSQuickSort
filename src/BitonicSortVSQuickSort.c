@@ -170,19 +170,6 @@ int main(int argc, char* argv[])
 
     if (i_rank == 0)
     {
-        printf("\nRISULTATO:\n");
-        int i;
-        for (i = 0; i < i_inputSize / BLOCK_SIZE; ++i)
-        {
-            int j;
-            for (j = 0; j < BLOCK_SIZE; ++j)
-            {
-                printf("%3d ", ar_quick[(BLOCK_SIZE * i) + j]);
-            }
-            printf("\n");
-        }
-        printf("\n\n");
-
         BOOL check = checkSorting(ar_quick, i_inputSize);
         printf("ar_quick ordinato? %d\n", check);
     }

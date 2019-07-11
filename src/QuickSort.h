@@ -4,6 +4,7 @@
 
 #include <mpi.h>
 
+/* Definizione del tipo booleano. */
 #ifndef BOOL
 #define BOOL int
 #define TRUE 1
@@ -16,12 +17,10 @@
 #define BOTH 0
 #define RIGHT 1
 
-/* Grandezza dei singoli blocchi, in modo da avere 2 blocchi in cache. */
-#define BLOCK_SIZE 16
-/**/
-#define PARAM_NUMBER 128
+#define BLOCK_SIZE 4092 /* Grandezza dei singoli blocchi. */
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
 
+/* Tag di comunicazione. */
 typedef enum
 {
     START_INDEX_TAG = 1,
@@ -39,7 +38,7 @@ typedef enum
     RANK_TAG
 } CommunicationTag;
 
-/* Stato di un processo. */
+/* Stato di un processo nella fase 1. */
 typedef enum
 {
     ACTIVE, /* Processo attivo nell'elaborazione. */
@@ -47,28 +46,28 @@ typedef enum
     INACTIVE /* Processo inattivo. */
 } ProcessState;
 
+/* Stato e rango di un processo nella fase 3. */
 typedef struct
 {
-    int i_rank;
-    BOOL b_continue;
+    int i_rank; /* Rango del processo. */
+    BOOL b_continue; /* TRUE se il processo rimane nella fase 3, FALSE se passa alla fase 4. */
 } ContinueState;
+
 
 /*******************FUNZIONI*******************/
 
 /*
 	Primitiva di neutralizzazione.
 
-	***Parametri***
-		int* ar
-			Puntatore all'array di input.
-		int i_left
-			Indice del primo elemento del blocco di sinistra.
-		int i_right
-			Indice del primo elemento del blocco di destra.
+	*** Parametri ***
+		int* ar_left
+			Puntatore all'array di input sinistro.
+		int* ar_right
+            Puntatore all'array di input destro.
 		int i_pivot
 			Valore del pivot.
 
-	***Restituzione***
+	*** Restituzione ***
 		LEFT se e' stato neutralizzato il blocco sinistro.
 		RIGHT se e' stato neutralizzato il blocco destro.
 		BOTH se sono stati neutralizzati entrambi i blocchi.

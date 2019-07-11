@@ -545,7 +545,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         if (i_groupSize > 1)
         {
             i_splitPoint = phaseOneTwo(ar_currentAr, i_currentSize, i_currentRank, i_groupSize, communicator);
-            printf("Splitpoint: %d, i_rank: %d\n", i_splitPoint, i_rank);
         }
 
         /* Raccolta dei dati aggiornati. */
@@ -573,7 +572,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         /* Dividi i processi tra le due parti dell'array. */
         if (i_groupSize > 1)
         {
-            printf("i_rank = %d, i_currentSize = %d, i_groupSize = %d\n", i_rank, i_currentSize, i_groupSize);
             int i_L1 = i_splitPoint; /* Grandezza del blocco di sinistra. */
     		int i_L2 = i_currentSize - i_L1; /* Grandezza del blocco di destra. */
     		int i_P2 = (i_L2 * i_groupSize)/i_currentSize; /* Numero di processi della parte di destra. */
@@ -586,7 +584,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
                 i_P2 = i_groupSize - 1;
             }
     		int i_P1 = i_groupSize - i_P2; /* Numero di processi della parte di sinistra. */
-            printf("\nSONO QUI %d; i_P1 = %d, i_P2 = %d\n", i_rank, i_P1, i_P2);
+
             /* Se il processo corrente e' nella parte sinistra... */
     		if (i_rank >= i_rootProcess && i_rank < i_rootProcess + i_P1)
     		{
@@ -638,7 +636,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             MPI_Isend(&st_currentState, 1, MPI_2INT, 0, RANK_TAG, MPI_COMM_WORLD, &sndReq12);
             if (i_rank == i_rootProcess && st_currentState.b_continue)
             {
-                printf("Sono un root: %d\n", i_rank);
                 MPI_Isend(&i_rank, 1, MPI_INT, 0, ROOT_TAG, MPI_COMM_WORLD, &sndReq4);
                 MPI_Isend(&i_startIndex, 1, MPI_INT, 0, START_INDEX_TAG, MPI_COMM_WORLD, &sndReq5);
                 MPI_Isend(&i_currentSize, 1, MPI_INT, 0, SECTION_LENGTH_TAG, MPI_COMM_WORLD, &sndReq6);
@@ -648,7 +645,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             /* Se il processo passa alla fase 4, richiede il proprio array. */
             else if (!st_currentState.b_continue)
             {
-                printf("Sto uscendo: %d\n", i_rank);
                 int temp = -1;
                 MPI_Isend(&temp, 1, MPI_INT, 0, ROOT_TAG, MPI_COMM_WORLD, &sndReq7);
                 MPI_Isend(&i_startIndex, 1, MPI_INT, 0, START_INDEX_TAG, MPI_COMM_WORLD, &sndReq8);
@@ -657,7 +653,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             }
             else
             {
-                printf("Sono un lavoratore: %d\n", i_rank);
                 int temp = -1;
                 MPI_Isend(&temp, 1, MPI_INT, 0, ROOT_TAG, MPI_COMM_WORLD, &sndReq10);
             }
@@ -686,8 +681,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
                     int i_start, i_len;
                     MPI_Recv(&i_start, 1, MPI_INT, i, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    printf("DISTRIBUZIONE a %d\n", i);
-                    printf("i_start = %d, i_len = %d\n", i_start, i_len);
 
                     MPI_Isend(&ar[i_start], i_len, MPI_INT, i, NEW_ARRAY_TAG, MPI_COMM_WORLD, &sndReq11);
                 }
@@ -715,14 +708,10 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             }
         }
     } while(i_processesInPhase3 > 1);
-    printf("USCITA: %d\n", i_rank);
+
 
     /*********** FASE QUATTRO ***********/
-    printf("i_startIndex = %d, i_currentSize = %d, i_rank = %d\n", i_startIndex, i_currentSize, i_rank);
-    if (i_rank == 0)
-    {
-        ar_currentAr = quickSort(ar_currentAr, i_currentSize);
-    }
+    ar_currentAr = quickSort(ar_currentAr, i_currentSize);
 
     MPI_Request finalRequest;
     if (i_rank != 0)
@@ -738,11 +727,9 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         MPI_Request finalRequests[MAX_PROCESSORS];
         for (i = 1; i < i_totalProcesses; ++i)
         {
-            printf("Ricevo %d\n", i_rank);
             int i_start, i_len;
             MPI_Recv(&i_start, 1, MPI_INT, i, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            printf("Ricevuto %d\n", i_rank);
             MPI_Irecv(&ar[i_start], i_len, MPI_INT, i, FINAL_UPDATE_TAG, MPI_COMM_WORLD, &finalRequests[i]);
         }
         MPI_Waitall(i_totalProcesses-1, &finalRequests[1], MPI_STATUS_IGNORE);
@@ -754,26 +741,21 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 int partition(int* ar, int left, int right)
 {
-	int x = ar[right]; /* Pivot. Aggiungere funzione di scelta anche per sopra. ***************************************************************************************/
-	int i = left-1;
-	int j;
+    int x = ar[right]; /* Pivot. Aggiungere funzione di scelta anche per sopra. ***************************************************************************************/
+    int i = left-1;
+    int j;
     int temp;
 
-	for(j = left; j <= right; ++j)
-	{
-		if(ar[j] <= x)
-		{
-			++i;
+    for(j = left; j <= right; ++j)
+    {
+        if(ar[j] <= x)
+        {
+            ++i;
             temp = ar[i];
             ar[i] = ar[j];
             ar[j] = temp;
-		}
-	}
-
-    ++i;
-    temp = ar[i];
-    ar[i] = ar[j];
-    ar[j] = temp;
+        }
+    }
     return(i);
 }
 
@@ -793,16 +775,13 @@ int* quickSort(int* ar, int i_arSize)
 	{
 		endIndex = final[top--];
 		startIndex = final[top--];
-        printf("startIndex = %d, endIndex = %d\n", startIndex, endIndex);
 
 		int p = partition(ar, startIndex, endIndex);
-        printf("p = %d\n", p);
 
-		if (p-1 > startIndex)
+		if (p - 1 > startIndex)
 		{
 			final[++top] = startIndex;
 			final[++top] = p - 1;
-
 		}
 		if (p + 1 < endIndex)
 		{
