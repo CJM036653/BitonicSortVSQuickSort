@@ -65,9 +65,7 @@ SIDE neutralize(int* ar_left, int* ar_right, int i_pivot)
 
 int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Comm communicator)
 {
-    BOOL check = TRUE;
-
-	int i_splitPoint;
+    int i_splitPoint;
 
 	/*********** FASE UNO ***********/
 	int i_LN, i_RN, i_leftBlock, i_rightBlock, i_pivot;
@@ -147,196 +145,198 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
     ProcessState currentState = ACTIVE;
     int remainder = i_arSize % BLOCK_SIZE;
     int i_activeProcesses = i_totalProcesses;
-    /*printf("remainder = %d\n", remainder);*/
-	while (i_activeProcesses > 0 && i_leftBlock <= i_rightBlock - remainder)
-	{
-		MPI_Barrier(communicator);
-		if (i_rank == 0)
-		{
-			int i, j;
-			j = 0;
-			for (i = 0; i < i_totalProcesses; i++)
-			{
-                if (ar_processStates[i] == ACTIVE)
-                {
-    				if (ar_neutralizedSides[i] == BOTH)
-    				{
-                        if (i_leftBlock < i_rightBlock - remainder)
-                        {
-        					ar_sndParams[j] = i_leftBlock;
-        					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, &reqs[0]);
-        					i_leftBlock += BLOCK_SIZE;
-        					ar_sndParams[++j] = i_rightBlock;
-        					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[1]);
-        					i_rightBlock -= BLOCK_SIZE;
+    /* Se sono disponibili almeno 2 blocchi procedi con la suddivisione. */
+    if (i_leftBlock < i_rightBlock - remainder)
+    {
+    	while (i_leftBlock <= i_rightBlock - remainder)
+    	{
+    		MPI_Barrier(communicator);
+    		if (i_rank == 0)
+    		{
+    			int i, j;
+    			j = 0;
+    			for (i = 0; i < i_totalProcesses; i++)
+    			{
+                    if (ar_processStates[i] == ACTIVE)
+                    {
+        				if (ar_neutralizedSides[i] == BOTH)
+        				{
+                            if (i_leftBlock < i_rightBlock - remainder)
+                            {
+            					ar_sndParams[j] = i_leftBlock;
+            					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, &reqs[0]);
+            					i_leftBlock += BLOCK_SIZE;
+            					ar_sndParams[++j] = i_rightBlock;
+            					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[1]);
+            					i_rightBlock -= BLOCK_SIZE;
+            					++j;
+                            }
+                            else
+                            {
+                                ar_processStates[i] = INACTIVE;
+                                --i_activeProcesses;
+                            }
+        				}
+        				else if (ar_neutralizedSides[i] == LEFT)
+        				{
+                            if (i_leftBlock <= i_rightBlock - remainder)
+                            {
+            					ar_sndParams[j] = i_leftBlock;
+            					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, &reqs[2]);
+            					i_leftBlock += BLOCK_SIZE;
+            					j+=2;
+                            }
+                            else
+                            {
+                                ar_processStates[i] = OPERATION_PENDING; /* Il processo deve inviare il blocco non neutralizzato al root. */
+                            }
+        				}
+        				else
+        				{
+                            if (i_leftBlock <= i_rightBlock - remainder)
+                            {
+            					ar_sndParams[++j] = i_rightBlock;
+            					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[3]);
+            					i_rightBlock -= BLOCK_SIZE;
+            					++j;
+                            }
+                            else
+                            {
+                                ar_processStates[i] = OPERATION_PENDING; /* Il processo deve inviare il blocco non neutralizzato al root. */
+                            }
+        				}
+                    }
+                    /* Invia ad ogni processo il proprio stato. */
+                    MPI_Isend(&ar_processStates[i], 1, MPI_INT, i, PROCESS_STATE_TAG, communicator, &reqProcState[i]);
+    			}
+    		}
+    		MPI_Bcast(&i_leftBlock, 1, MPI_INT, 0, communicator);
+    		MPI_Bcast(&i_rightBlock, 1, MPI_INT, 0, communicator);
+            MPI_Recv(&currentState, 1, MPI_INT, 0, PROCESS_STATE_TAG, communicator, MPI_STATUS_IGNORE);
+            if (i_rank == 0)
+            {
+                printf("Sono qui, siamo in %d processi.\n", i_totalProcesses);
+                printf("i_leftBlock = %d, i_rightBlock = %d\n", i_leftBlock, i_rightBlock);
+                printf("i_arSize = %d\n", i_arSize);
+                printf("remainder = %d\n", remainder);
+            }
+
+            if (currentState == ACTIVE)
+            {
+                /* Ricezione dei nuovi blocchi da neutralizzare. */
+            	if (lastNeutralizedSide == BOTH)
+            	{
+            		MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, MPI_STATUS_IGNORE);
+            		MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, MPI_STATUS_IGNORE);
+            	}
+            	else if (lastNeutralizedSide == LEFT)
+            	{
+            		MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, MPI_STATUS_IGNORE);
+            	}
+            	else
+            	{
+            		MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, MPI_STATUS_IGNORE);
+            	}
+                /* Neutralizzazione. */
+                lastNeutralizedSide = neutralize(ar_left, ar_right, i_pivot);
+            }
+
+            /* Raccolta dei risultati. */
+    		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, 1, MPI_INT, 0, communicator);
+
+            /* Aggiornamento dei blocchi appena neutralizzati. */
+            if (currentState == ACTIVE)
+            {
+        		if (lastNeutralizedSide == BOTH)
+        		{
+        			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs[0]);
+        			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[1]);
+        		}
+        		else if (lastNeutralizedSide == LEFT)
+        		{
+        			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs[0]);
+        		}
+        		else
+        		{
+        			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[0]);
+        		}
+            }
+            /* Aggiornamento dei blocchi non neutralizzati dei processi in disattivazione. */
+            else if (currentState == OPERATION_PENDING)
+            {
+                if (lastNeutralizedSide == LEFT)
+        		{
+        			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[0]);
+        		}
+        		else
+        		{
+        			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs[0]);
+        		}
+            }
+
+    		if (i_rank == 0)
+    		{
+    			int i;
+    			int j = 0;
+    			int k = 0;
+    			for (i = 0; i < i_totalProcesses; i++)
+    			{
+                    if (ar_processStates[i] == ACTIVE)
+                    {
+        				if (ar_neutralizedSides[i] == BOTH)
+        				{
+        					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
         					++j;
-                        }
-                        else
-                        {
-                            ar_processStates[i] = INACTIVE;
-                            --i_activeProcesses;
-                        }
-    				}
-    				else if (ar_neutralizedSides[i] == LEFT)
-    				{
-                        if (i_leftBlock <= i_rightBlock - remainder)
-                        {
-        					ar_sndParams[j] = i_leftBlock;
-        					MPI_Isend(&ar[i_leftBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, &reqs[2]);
-        					i_leftBlock += BLOCK_SIZE;
-        					j+=2;
-                        }
-                        else
-                        {
-                            ar_processStates[i] = OPERATION_PENDING; /* Il processo deve inviare il blocco non neutralizzato al root. */
-                        }
-    				}
-    				else
-    				{
-                        if (i_leftBlock <= i_rightBlock - remainder)
-                        {
-        					ar_sndParams[++j] = i_rightBlock;
-        					MPI_Isend(&ar[i_rightBlock], BLOCK_SIZE, MPI_INT, i, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, &reqs[3]);
-        					i_rightBlock -= BLOCK_SIZE;
+        					++k;
+        					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
         					++j;
-                        }
-                        else
-                        {
-                            ar_processStates[i] = OPERATION_PENDING; /* Il processo deve inviare il blocco non neutralizzato al root. */
-                        }
-    				}
-                }
-                /* Invia ad ogni processo il proprio stato. */
-                MPI_Isend(&ar_processStates[i], 1, MPI_INT, i, PROCESS_STATE_TAG, communicator, &reqProcState[i]);
-			}
-		}
-		MPI_Bcast(&i_leftBlock, 1, MPI_INT, 0, communicator);
-		MPI_Bcast(&i_rightBlock, 1, MPI_INT, 0, communicator);
-        MPI_Recv(&currentState, 1, MPI_INT, 0, PROCESS_STATE_TAG, communicator, MPI_STATUS_IGNORE);
-        if (i_rank == 0)
-        {
-            printf("Sono qui, siamo in %d processi.\n", i_totalProcesses);
-            printf("i_leftBlock = %d, i_rightBlock = %d\n", i_leftBlock, i_rightBlock);
-            printf("i_arSize = %d\n", i_arSize);
-            printf("remainder = %d\n", remainder);
-        }
-
-        if (currentState == ACTIVE)
-        {
-            /* Ricezione dei nuovi blocchi da neutralizzare. */
-        	if (lastNeutralizedSide == BOTH)
-        	{
-        		MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, MPI_STATUS_IGNORE);
-        		MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, MPI_STATUS_IGNORE);
-        	}
-        	else if (lastNeutralizedSide == LEFT)
-        	{
-        		MPI_Recv(ar_left, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_LEFT, communicator, MPI_STATUS_IGNORE);
-        	}
-        	else
-        	{
-        		MPI_Recv(ar_right, BLOCK_SIZE, MPI_INT, MPI_ANY_SOURCE, BLOCK_DISTRIBUTION_TAG_RIGHT, communicator, MPI_STATUS_IGNORE);
-        	}
-            /* Neutralizzazione. */
-            lastNeutralizedSide = neutralize(ar_left, ar_right, i_pivot);
-        }
-
-        /* Raccolta dei risultati. */
-		MPI_Gather(&lastNeutralizedSide, 1, MPI_INT, ar_neutralizedSides, 1, MPI_INT, 0, communicator);
-
-        /* Aggiornamento dei blocchi appena neutralizzati. */
-        if (currentState == ACTIVE)
-        {
-    		if (lastNeutralizedSide == BOTH)
-    		{
-    			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs[0]);
-    			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[1]);
+        					++k;
+                            ar_remainingBlocks[i] = -1;
+                            i_LN += BLOCK_SIZE;
+                            i_RN -= BLOCK_SIZE;
+        				}
+        				else if (ar_neutralizedSides[i] == LEFT)
+        				{
+        					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
+                            ar_remainingBlocks[i] = ar_sndParams[++j];
+        					++j;
+        					++k;
+                            i_LN += BLOCK_SIZE;
+        				}
+        				else
+        				{
+                            ar_remainingBlocks[i] = ar_sndParams[j];
+        					++j;
+        					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
+        					++j;
+        					++k;
+                            i_RN -= BLOCK_SIZE;
+        				}
+                    }
+                    else if (ar_processStates[i] == OPERATION_PENDING)
+                    {
+                        if (ar_neutralizedSides[i] == LEFT)
+        				{
+                            ++j;
+                            MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
+                            ar_remainingBlocks[i] = ar_sndParams[j];
+                            ++j;
+                            ++k;
+        				}
+        				else
+        				{
+                            MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
+                            ar_remainingBlocks[i] = ar_sndParams[j];
+                            j+=2;
+                            ++k;
+        				}
+                        ar_processStates[i] = INACTIVE;
+                    }
+    			}
+    			MPI_Waitall(k, reqs0, status);
     		}
-    		else if (lastNeutralizedSide == LEFT)
-    		{
-    			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs[0]);
-    		}
-    		else
-    		{
-    			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[0]);
-    		}
-        }
-        /* Aggiornamento dei blocchi non neutralizzati dei processi in disattivazione. */
-        else if (currentState == OPERATION_PENDING)
-        {
-            if (lastNeutralizedSide == LEFT)
-    		{
-    			MPI_Isend(ar_right, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs[0]);
-    		}
-    		else
-    		{
-    			MPI_Isend(ar_left, BLOCK_SIZE, MPI_INT, 0, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs[0]);
-    		}
-        }
-
-		if (i_rank == 0)
-		{
-			int i;
-			int j = 0;
-			int k = 0;
-			for (i = 0; i < i_totalProcesses; i++)
-			{
-                if (ar_processStates[i] == ACTIVE)
-                {
-    				if (ar_neutralizedSides[i] == BOTH)
-    				{
-    					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
-    					++j;
-    					++k;
-    					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
-    					++j;
-    					++k;
-                        ar_remainingBlocks[i] = -1;
-                        i_LN += BLOCK_SIZE;
-                        i_RN -= BLOCK_SIZE;
-    				}
-    				else if (ar_neutralizedSides[i] == LEFT)
-    				{
-    					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
-                        ar_remainingBlocks[i] = ar_sndParams[++j];
-    					++j;
-    					++k;
-                        i_LN += BLOCK_SIZE;
-    				}
-    				else
-    				{
-                        ar_remainingBlocks[i] = ar_sndParams[j];
-    					++j;
-    					MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
-    					++j;
-    					++k;
-                        i_RN -= BLOCK_SIZE;
-    				}
-                }
-                else if (ar_processStates[i] == OPERATION_PENDING)
-                {
-                    if (ar_neutralizedSides[i] == LEFT)
-    				{
-                        ++j;
-                        MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_RIGHT, communicator, &reqs0[k]);
-                        ar_remainingBlocks[i] = ar_sndParams[j];
-                        ++j;
-                        ++k;
-    				}
-    				else
-    				{
-                        MPI_Irecv(&ar[ar_sndParams[j]], BLOCK_SIZE, MPI_INT, i, BLOCK_UPDATE_TAG_LEFT, communicator, &reqs0[k]);
-                        ar_remainingBlocks[i] = ar_sndParams[j];
-                        j+=2;
-                        ++k;
-    				}
-                    ar_processStates[i] = INACTIVE;
-                    --i_activeProcesses;
-                }
-			}
-			MPI_Waitall(k, reqs0, status);
-		}
-	}
+    	}
+    }
 	MPI_Barrier(communicator);
     printf("Sono nelle fasi 1/2: %d\n", i_rank);
 
@@ -581,16 +581,12 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
     /* Richieste di invio. */
     MPI_Request sndReq0, sndReq1, sndReq2, sndReq3, sndReq4, sndReq5, sndReq6, sndReq7, sndReq8, sndReq9, sndReq10, sndReq11, sndReq12;
-    /* Richieste di ricezione. */
-    MPI_Request rcvReq0, rcvReq1, rcvReq2, rcvReq3, rcvReq4;
 
     /* Array che tiene conto di quali processori sono i root dell'iterazione corrente. */
     char* ar_rootIndices = NULL;
-    int* ar_activeProcesses = NULL;
 	if (i_rank == 0)
 	{
 		ar_rootIndices = calloc(i_totalProcesses, sizeof(char));
-        ar_activeProcesses = calloc(i_totalProcesses, sizeof(int));
 	}
 
     int iterazion = 0;
@@ -630,33 +626,37 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         }
 
         /* Dividi i processi tra le due parti dell'array. */
-        int i_L1 = i_splitPoint; /* Grandezza del blocco di sinistra. */
-		int i_L2 = i_currentSize - i_L1; /* Grandezza del blocco di destra. */
-		int i_P2 = (i_L2 * i_groupSize)/i_currentSize; /* Numero di processi della parte di destra. */
-        if (i_P2 == 0)
+        if (i_groupSize > 1)
         {
-            i_P2 = 1;
+            printf("i_rank = %d, i_currentSize = %d, i_groupSize = %d\n", i_rank, i_currentSize, i_groupSize);
+            int i_L1 = i_splitPoint; /* Grandezza del blocco di sinistra. */
+    		int i_L2 = i_currentSize - i_L1; /* Grandezza del blocco di destra. */
+    		int i_P2 = (i_L2 * i_groupSize)/i_currentSize; /* Numero di processi della parte di destra. */
+            if (i_P2 == 0)
+            {
+                i_P2 = 1;
+            }
+            else if (i_P2 == i_groupSize)
+            {
+                i_P2 = i_groupSize - 1;
+            }
+    		int i_P1 = i_groupSize - i_P2; /* Numero di processi della parte di sinistra. */
+            printf("\nSONO QUI %d; i_P1 = %d, i_P2 = %d\n", i_rank, i_P1, i_P2);
+            /* Se il processo corrente e' nella parte sinistra... */
+    		if (i_rank >= i_rootProcess && i_rank < i_rootProcess + i_P1)
+    		{
+    			i_groupSize = i_P1;
+                i_currentSize = i_L1;
+    		}
+            /* Se il processo corrente e' nella parte destra... */
+    		else
+    		{
+    			i_rootProcess += i_P1;
+    			i_groupSize = i_P2;
+                i_currentSize = i_L2;
+                i_startIndex += i_L1;
+    		}
         }
-        else if (i_P2 == i_groupSize)
-        {
-            i_P2 = i_groupSize - 1;
-        }
-		int i_P1 = i_groupSize - i_P2; /* Numero di processi della parte di sinistra. */
-        printf("\nSONO QUI %d; i_P1 = %d, i_P2 = %d\n", i_rank, i_P1, i_P2);
-        /* Se il processo corrente e' nella parte sinistra... */
-		if (i_rank >= i_rootProcess && i_rank < i_rootProcess + i_P1)
-		{
-			i_groupSize = i_P1;
-            i_currentSize = i_L1;
-		}
-        /* Se il processo corrente e' nella parte destra... */
-		else
-		{
-			i_rootProcess += i_P1;
-			i_groupSize = i_P2;
-            i_currentSize = i_L2;
-            i_startIndex += i_L1;
-		}
 
         /* Informa il processo 0 se il processo corrente resta nella fase 3 o passa alla fase 4.
            Il processo 0 deve rimanere nel ciclo per coordinare gli altri. */
@@ -678,7 +678,6 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
         if (i_rank != 0 && ((st_currentState.b_continue && i_rank == i_rootProcess) || !st_currentState.b_continue))
         {
-            printf(" ************* i_rank = %d, ar_currentAr = %p ************** \n", i_rank, ar_currentAr);
             free(ar_currentAr);
             ar_currentAr = malloc(sizeof(int) * i_currentSize);
             if (ar_currentAr == NULL)
@@ -729,25 +728,21 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             {
                 int i_index;
                 MPI_Recv(&i_index, 1, MPI_INT, MPI_ANY_SOURCE, ROOT_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                printf("i_index = %d\n", i_index);
                 if (i_index != -1)
                 {
                     ar_rootIndices[i_index] = currentChar;
-                    printf("*** i_index = %d, ar_rootIndices[i_index] = %c\n", i_index, ar_rootIndices[i_index]);
                 }
             }
 
             /* Distribuisce ai root i loro array. */
-            printf("currentChar = %c\n", currentChar);
             for (i = 1; i < i_totalProcesses; ++i)
             {
-                printf("DISTRIBUZIONE a %d\n", i);
-                printf("ar_rootIndices[i] = %c\n", ar_rootIndices[i]);
                 if (ar_rootIndices[i] == currentChar)
                 {
                     int i_start, i_len;
                     MPI_Recv(&i_start, 1, MPI_INT, i, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    printf("DISTRIBUZIONE a %d\n", i);
                     printf("i_start = %d, i_len = %d\n", i_start, i_len);
 
                     MPI_Isend(&ar[i_start], i_len, MPI_INT, i, NEW_ARRAY_TAG, MPI_COMM_WORLD, &sndReq11);
@@ -771,7 +766,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
                 {
                     printf("Invio finale a %d.\n", st_state.i_rank);
                     --i_processesInPhase3;
-                    int i_start, i_len, i_index;
+                    int i_start, i_len;
                     MPI_Recv(&i_start, 1, MPI_INT, st_state.i_rank, START_INDEX_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Recv(&i_len, 1, MPI_INT, st_state.i_rank, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     MPI_Isend(&ar[i_start], i_len, MPI_INT, st_state.i_rank, NEW_ARRAY_TAG, MPI_COMM_WORLD, &lastRequest[i]);
@@ -784,8 +779,8 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
     /*********** FASE QUATTRO ***********/
     printf("i_startIndex = %d, i_currentSize = %d, i_rank = %d\n", i_startIndex, i_currentSize, i_rank);
-    ar_currentAr = quickSort(ar_currentAr, i_currentSize);
-
+    /*ar_currentAr = quickSort(ar_currentAr, i_currentSize);*/
+    /*
     MPI_Request finalRequest;
     if (i_rank != 0)
     {
@@ -807,7 +802,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         }
         MPI_Waitall(i_totalProcesses-1, &finalRequests[1], MPI_STATUS_IGNORE);
     }
-
+    */
 
     return ar;
 }
