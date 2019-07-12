@@ -834,56 +834,37 @@ int partition(int* ar, int left, int right)
     int i_start = left;
     int i_end = right;
     int i_arSize = right - left + 1;
-    if (i_arSize > 3)
+    if (i_arSize > QUICK_THRESHOLD)
     {
-        i_pivot = pivotChoice(ar, i_arSize, left);
+        i_pivot = (ar[left] + ar[right]) / 2;
     }
     else
     {
-        if (i_arSize == 2)
+        /* Insertion sort. */
+        int i;
+        for (i = i_start + 1; i <= right; ++i)
         {
-            if (ar[left] > ar[right])
+            int a = i - 1;
+            int b = i;
+            while (a >= i_start && ar[a] > ar[b])
             {
-                int temp = ar[left];
-                ar[left] = ar[right];
-                ar[right] = temp;
+                int temp = ar[a];
+                ar[a] = ar[b];
+                ar[b] = temp;
+                --a;
+                --b;
             }
-            return right;
         }
-        else
-        {
-            int mid = right - 1;
-            int temp;
-            if (ar[left] > ar[mid])
-            {
-                temp = ar[left];
-                ar[left] = ar[mid];
-                ar[mid] = temp;
-            }
-            if (ar[mid] > ar[right])
-            {
-                temp = ar[mid];
-                ar[mid] = ar[right];
-                ar[right] = temp;
-            }
-            if (ar[left] > ar[mid])
-            {
-                temp = ar[left];
-                ar[left] = ar[mid];
-                ar[mid] = temp;
-            }
-            return mid;
-        }
+        return -1;
     }
 
-    /*printf("left = %d, right = %d, i_pivot = %d, i_arSize = %d\n", left, right, i_pivot, i_arSize);*/
     while (left <= right)
     {
-        if (ar[left] <= i_pivot)
+        if (ar[left] < i_pivot)
         {
             ++left;
         }
-        else if (ar[right] >= i_pivot)
+        else if (ar[right] > i_pivot)
         {
             --right;
         }
@@ -896,98 +877,45 @@ int partition(int* ar, int left, int right)
             right--;
         }
     }
-    /*
-    printf("left = %d\n", left);
-    int ciao = i_start;
-    int ciao2 = 0;
-    while(ciao <= i_end)
-    {
-        if (ciao < left)
-        {
-            if (ar[ciao] <= i_pivot)
-            {
-                printf("\033[0;31m");
-            }
-            else
-            {
-                printf("\033[0;33m");
-            }
-        }
-        else
-        {
-            if (ar[ciao] >= i_pivot)
-            {
-                printf("\033[0;32m");
-            }
-            else
-            {
-                printf("\033[0;33m");
-            }
-        }
-        printf("%3d ", ar[ciao]);
-        ++ciao;
-        ++ciao2;
-        if (ciao2 == BLOCK_SIZE)
-        {
-            ciao2 = 0;
-            printf("\n");
-        }
-    }
-    printf("\033[0m\n\n");
-    */
-    return left;
-    /*
-    printf("i_pivot = %d, i_arSize = %d\n", i_pivot, i_arSize);
-    i_pivot = ar[right];
-    int i = left-1;
-    int j;
-    int temp;
 
-    for(j = left; j <= right; ++j)
-    {
-        if(ar[j] <= i_pivot)
-        {
-            ++i;
-            temp = ar[i];
-            ar[i] = ar[j];
-            ar[j] = temp;
-        }
-    }
-    return i;
-    */
+    return left;
 }
 
 
 int* quickSort(int* ar, int i_arSize)
 {
-	int startIndex = 0;
-	int endIndex = i_arSize-1;
-	int top = -1;
+    int startIndex = 0;
+    int endIndex = i_arSize - 1;
+    int top = -1;
 
-	int* final = malloc(sizeof(int) * i_arSize);
+    int* final = (int*)(malloc(sizeof(int) * i_arSize));
 
-	final[++top] = startIndex;
-	final[++top] = endIndex;
+    final[++top] = startIndex;
+    final[++top] = endIndex;
 
-	while (top >= 0)
-	{
-		endIndex = final[top--];
-		startIndex = final[top--];
+    while (top >= 0)
+    {
+        endIndex = final[top--];
+        startIndex = final[top--];
 
-		int p = partition(ar, startIndex, endIndex);
+        int p = partition(ar, startIndex, endIndex);
 
-		if (p - 1 > startIndex)
-		{
-			final[++top] = startIndex;
-			final[++top] = p - 1;
-		}
-		if (p < endIndex)
-		{
-			final[++top] = p;
-			final[++top] = endIndex;
-		}
-	}
+        if (p != -1)
+        {
+            if (p - 1 > startIndex)
+            {
+                final[++top] = startIndex;
+                final[++top] = p - 1;
+            }
+            if (p < endIndex)
+            {
+                final[++top] = p;
+                final[++top] = endIndex;
+            }
+        }
+    }
 
     free(final);
     return ar;
+}
 }
