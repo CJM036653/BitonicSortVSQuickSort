@@ -21,7 +21,7 @@
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
 
 /* Soglia della dimensione di un array sotto la quale viene eseguito insertion sort invece di quick sort. */
-#define QUICK_THRESHOLD = 30;
+#define QUICK_THRESHOLD 30
 
 #define ALLOCATION_FAILED_ERR -1
 

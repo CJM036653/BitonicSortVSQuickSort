@@ -918,4 +918,3 @@ int* quickSort(int* ar, int i_arSize)
     free(final);
     return ar;
 }
-}
