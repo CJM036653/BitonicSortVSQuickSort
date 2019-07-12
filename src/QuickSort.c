@@ -170,6 +170,7 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
             MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED_ERR);
         }
 
+        /*i_pivot = (ar[0] + ar[i_arSize - 1]) / 2;*/
 		i_pivot = pivotChoice(ar, i_arSize, 0);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
@@ -602,6 +603,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             MPI_Isend(&i_startIndex, 1, MPI_INT, 0, START_INDEX_TAG, MPI_COMM_WORLD, &sndReq0);
             MPI_Isend(&i_currentSize, 1, MPI_INT, 0, SECTION_LENGTH_TAG, MPI_COMM_WORLD, &sndReq1);
             MPI_Isend(ar_currentAr, i_currentSize, MPI_INT, 0, UPDATED_ARRAY_TAG, MPI_COMM_WORLD, &sndReq2);
+            MPI_Wait(&sndReq2, MPI_STATUS_IGNORE); /* Attende che 0 riceva i dati, per non riallocare ar_currentAr troppo presto. */
         }
         if (i_rank == 0)
         {
@@ -675,7 +677,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             if (ar_currentAr == NULL)
             {
                 printf("Allocazione fallita (processo %d).\n", i_rank);
-                return NULL;
+                MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED_ERR);
             }
         }
 
@@ -744,6 +746,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             MPI_Request lastRequest[MAX_PROCESSORS];
             for (i = 1; i < i_maxIter; ++i)
             {
+                /* Se un processo sta uscendo dalla fase 3, inviagli il suo array da ordinare. */
                 ContinueState st_state;
                 MPI_Recv(&st_state, 1, MPI_2INT, MPI_ANY_SOURCE, RANK_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 if (!st_state.b_continue)
@@ -762,45 +765,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
     /*********** FASE QUATTRO ***********/
     printf("Inizio fase sequenziale: i_rank = %d, i_currentSize = %d\n", i_rank, i_currentSize);
     /* Ordinamento sequenziale indipendente per ogni processo. */
-    /*
-    if (i_rank == 0)
-    {
-        int ciao = 0;
-        int ciao2 = 0;
-        while(ciao < i_arSize)
-        {
-            printf("%3d ", ar[ciao]);
-            ++ciao;
-            ++ciao2;
-            if (ciao2 == BLOCK_SIZE)
-            {
-                ciao2 = 0;
-                printf("\n");
-            }
-        }
-        printf("\n\n");
-    }
-    */
     ar_currentAr = quickSort(ar_currentAr, i_currentSize);
-    /*
-    if (i_rank == 0)
-    {
-        int ciao = 0;
-        int ciao2 = 0;
-        while(ciao < i_arSize)
-        {
-            printf("%3d ", ar[ciao]);
-            ++ciao;
-            ++ciao2;
-            if (ciao2 == BLOCK_SIZE)
-            {
-                ciao2 = 0;
-                printf("\n");
-            }
-        }
-        printf("\n\n");
-    }
-    */
     MPI_Request finalRequest;
     if (i_rank != 0)
     {
@@ -829,15 +794,16 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
 
 int partition(int* ar, int left, int right)
 {
-    /* Scelta del pivot. */
     int i_pivot;
     int i_start = left;
     int i_end = right;
     int i_arSize = right - left + 1;
+    /* Se siamo sopra la soglia, scegli il pivot e prosegui con la divisione. */
     if (i_arSize > QUICK_THRESHOLD)
     {
-        i_pivot = (ar[left] + ar[right]) / 2;
+        i_pivot = (ar[left] + ar[right]) / 2; /* Scelta semplice, fornisce buone prestazioni in pratica. */
     }
+    /* Altrimenti insertion sort ha meno overhead di quick sort e risulta piu' efficiente. */
     else
     {
         /* Insertion sort. */
@@ -857,7 +823,7 @@ int partition(int* ar, int left, int right)
         }
         return -1;
     }
-
+    /* Suddivisione degli elementi in base al pivot. */
     while (left <= right)
     {
         if (ar[left] < i_pivot)

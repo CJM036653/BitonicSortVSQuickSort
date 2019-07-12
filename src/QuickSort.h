@@ -17,10 +17,11 @@
 #define BOTH 0
 #define RIGHT 1
 
-#define BLOCK_SIZE 16 /* Grandezza dei singoli blocchi. */
+#define BLOCK_SIZE 4092 /* Grandezza dei singoli blocchi. */
 #define MAX_PROCESSORS 32 /* Numero massimo di processori supportati. */
 
-/* Soglia della dimensione di un array sotto la quale viene eseguito insertion sort invece di quick sort. */
+/* Soglia della dimensione di un array sotto la quale viene eseguito insertion sort invece di quick sort.
+   Valore scelto sperimentalmente. */
 #define QUICK_THRESHOLD 30
 
 #define ALLOCATION_FAILED_ERR -1
