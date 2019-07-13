@@ -38,6 +38,7 @@ int binSearch(int value, int a[], int dim)
     else
       return mid;
   }
+
   return lo;
 }
 
@@ -57,11 +58,11 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
     int c = binSearch(val, in, num_keys);
 
     int buf_size = num_keys - c;
-    int buf[buf_size];
+    int* buf = (int*)malloc(buf_size * sizeof(int));
     memcpy(buf, &in[c], (buf_size) * sizeof(*in));
 
     /* Split and Partial Exchange */
-    int ex[num_keys];
+    int* ex = (int*)malloc(num_keys * sizeof(int));
     MPI_Send(buf, buf_size, MPI_INT, r_max, 0, MPI_COMM_WORLD);
     MPI_Recv(ex, num_keys, MPI_INT, r_max, 0, MPI_COMM_WORLD, &status);
 
@@ -81,6 +82,9 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
       in[i] = buf[j++];
     for(; i < num_keys && k < ex_size; i++)
       in[i] = ex[k++];
+
+    free(buf);
+    free(ex);
   }
   else if(rank == r_max)
   {
@@ -92,11 +96,11 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
     int c = binSearch(val, in, num_keys);
 
     int buf_size = c;
-    int buf[buf_size];
+    int* buf = (int*)malloc(buf_size * sizeof(int));
     memcpy(buf, &in[0], (c) * sizeof(*in));
 
     /* Split and Partial Exchange */
-    int ex[num_keys];
+    int* ex = (int*)malloc(num_keys * sizeof(int));
     MPI_Recv(ex, num_keys, MPI_INT, r_min, 0, MPI_COMM_WORLD, &status);
     MPI_Send(buf, buf_size, MPI_INT, r_min, 0, MPI_COMM_WORLD);
 
@@ -116,6 +120,9 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
       in[i] = buf[j--];
     for(; i >= 0 && k >= 0; i--)
       in[i] = ex[k--];
+
+    free(buf);
+    free(ex);
   }
   else
   {
@@ -129,14 +136,14 @@ int* bitonicSortManager(int array[], int arraySize, int rank, int size)
     /* Divide the values equally between the processors */
     int num_keys = arraySize / size;
 
-    int in[num_keys];
+    int* in = (int*)malloc(num_keys * sizeof(int));
 
     /* Send to each process its input for Bitonic Sorting */
     MPI_Scatter(
       array,
       num_keys,
       MPI_INT,
-      &in,
+      in,
       num_keys,
       MPI_INT,
       MASTER,
@@ -201,6 +208,8 @@ int* bitonicSortManager(int array[], int arraySize, int rank, int size)
       MPI_INT,
       MASTER,
       MPI_COMM_WORLD);
+
+      free(in);
 
       return array;
 }
