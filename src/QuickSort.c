@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <mpi.h>
 #include <math.h>
 
 /* Dealloca le risorse. */

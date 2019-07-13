@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "BitonicSort.h"
+/*#include "BitonicSort.h"*/
 #include "QuickSort.h"
 
 #define MAX_READ_SIZE 16 /* Massima lunghezza di un intero scritto come testo. */
