@@ -7,6 +7,7 @@
 #include <fcntl.h>
 
 /*#include "BitonicSort.h"*/
+#include "BitonicSort.h"
 #include "QuickSort.h"
 
 #define MAX_READ_SIZE 16 /* Massima lunghezza di un intero scritto come testo. */
@@ -174,10 +175,14 @@ int main(int argc, char* argv[])
 
     MPI_Bcast(&i_inputSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
     /* Avvio di QuickSort. */
+	ar_bitonic = bitonicSortManager(ar_bitonic, i_inputSize, i_rank, i_totalProcesses);
 	ar_quick = quickSortManager(ar_quick, i_inputSize, i_rank, i_totalProcesses);
 
     if (i_rank == 0)
     {
+	BOOL check = checkSorting(ar_bitonic, i_inputSize);
+        printf("ar_bitonic ordinato? %d\n", check);
+	    
         BOOL check = checkSorting(ar_quick, i_inputSize);
         printf("ar_quick ordinato? %d\n", check);
     }
