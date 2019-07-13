@@ -37,17 +37,6 @@ static void swap(int* ar, int i_left, int i_right)
 static int pivotChoice(int* ar, int i_arSize)
 {
     int i_1, i_2, i_3, i_min, i_max;
-<<<<<<< HEAD
-    i_1 = (rand() % i_arSize) + i_offset;
-    i_2 = (rand() % i_arSize) + i_offset;
-    i_3 = (rand() % i_arSize) + i_offset;
-    printf("i_1 = %d, i_2 = %d, i_3 = %d\n", i_1, i_2, i_3);
-    i_1 = ar[i_1];
-    i_2 = ar[i_2];
-    i_3 = ar[i_3];
-    printf("i_1 = %d, i_2 = %d, i_3 = %d\n", i_1, i_2, i_3);
-
-=======
     i_1 = (rand() % i_arSize);
     i_2 = (rand() % i_arSize);
     i_3 = (rand() % i_arSize);
@@ -55,8 +44,7 @@ static int pivotChoice(int* ar, int i_arSize)
     i_1 = ar[i_1];
     i_2 = ar[i_2];
     i_3 = ar[i_3];
-    
->>>>>>> 337a1e6bfbef801340ea300900beddfea9c35987
+
     if (i_1 > i_2)
     {
         i_max = (i_1 > i_3 ? i_1 : i_3);
@@ -183,13 +171,8 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
         }
 
         /*i_pivot = (ar[0] + ar[i_arSize - 1]) / 2;*/
-<<<<<<< HEAD
-		i_pivot = pivotChoice(ar, i_arSize, 0);
-        printf("Pivot: %d\n", i_pivot);
-=======
 		i_pivot = pivotChoice(ar, i_arSize);
-    printf("pivot: %d\n",i_pivot );
->>>>>>> 337a1e6bfbef801340ea300900beddfea9c35987
+        printf("Pivot: %d\n", i_pivot);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
