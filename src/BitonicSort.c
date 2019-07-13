@@ -1,5 +1,3 @@
-/* Implementazione di BitonicSort. */
-
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -98,8 +96,8 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
   else if(rank == r_max)
   {
     /* Max polarity */
-    MPI_Send(&in[0], 1, MPI_INT, r_min, 0, MPI_COMM_WORLD);
     MPI_Recv(&val, 1, MPI_INT, r_min, 0, MPI_COMM_WORLD, &status);
+    MPI_Send(&in[0], 1, MPI_INT, r_min, 0, MPI_COMM_WORLD);
 
     /* Local Detection */
     int c = binSearch(val, in, num_keys);
@@ -110,8 +108,8 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
 
     /* Split and Partial Exchange */
     int ex[num_keys];
-    MPI_Send(buf, buf_size, MPI_INT, r_min, 0, MPI_COMM_WORLD);
     MPI_Recv(ex, num_keys, MPI_INT, r_min, 0, MPI_COMM_WORLD, &status);
+    MPI_Send(buf, buf_size, MPI_INT, r_min, 0, MPI_COMM_WORLD);
 
     int ex_size;
     MPI_Get_count(&status, MPI_INT, &ex_size);
