@@ -780,6 +780,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
     {
         int i, i_start, i_len;
         MPI_Request finalRequests[MAX_PROCESSORS];
+        MPI_Status finalStatus[MAX_PROCESSORS];
         for (i = 1; i < i_totalProcesses; ++i)
         {
             int i_start, i_len;
@@ -787,7 +788,7 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             MPI_Recv(&i_len, 1, MPI_INT, i, SECTION_LENGTH_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Irecv(&ar[i_start], i_len, MPI_INT, i, FINAL_UPDATE_TAG, MPI_COMM_WORLD, &finalRequests[i]);
         }
-        MPI_Waitall(i_totalProcesses-1, &finalRequests[1], MPI_STATUS_IGNORE);
+        MPI_Waitall(i_totalProcesses-1, &finalRequests[1], &finalStatus[1]);
 
         free(ar_rootIndices);
     }
