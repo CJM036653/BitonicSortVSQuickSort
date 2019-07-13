@@ -1,2 +1,2 @@
-BitonicSortVSQuickSort: BitonicSortVSQuickSort.c QuickSort.c
-	mpicc BitonicSortVSQuickSort.c QuickSort.c -o ../bin/BitonicSortVSQuickSort
+BitonicSortVSQuickSort: BitonicSortVSQuickSort.c QuickSort.c BitonicSort.c
+	mpicc BitonicSortVSQuickSort.c QuickSort.c BitonicSort.c -o ../bin/BitonicSortVSQuickSort

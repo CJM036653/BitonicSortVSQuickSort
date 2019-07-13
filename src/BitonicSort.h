@@ -10,19 +10,17 @@
 #define FALSE 0
 #endif
 
-/*Compare two values and swap base on direction:
-true -> swap if a > b
-false -> swap if a <= b*/
-void compare(int *a, int *b, bool dir);
+/* Swaps elements in position i and j of array a */
+void swap(int a[], int i, int j);
 
-/*Sort a sequence in ascending order if dir = 1 or descending if dir = 0*/
-void bitonicMerge(int a[], int low, int dim, bool dir);
+/* Modified binary search: returns the index of the nearest lower value
+if the value is not found, otherwise it returns the index as usual */
+int binSearch(int value, int a[], int dim);
 
-void bitonicSort(int a[], int low, int dim, bool dir);
-
-void sort(int a[], int dim);
-
+/* Merge and Split operation as described in the paper */
 void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys);
+
+int* bitonicSortManager(int array[], int arraySize, int rank, int size);
 
 
 #endif
