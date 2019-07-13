@@ -7,7 +7,6 @@
 #include <fcntl.h>
 /*#include <libhpc.h>*/
 
-/*#include "BitonicSort.h"*/
 #include "BitonicSort.h"
 #include "QuickSort.h"
 
