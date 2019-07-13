@@ -5,10 +5,14 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+/*#include <libhpc.h>*/
 
 /*#include "BitonicSort.h"*/
 #include "BitonicSort.h"
 #include "QuickSort.h"
+
+#define BITONIC_PERFORMANCE_ID 1
+#define QUICK_PERFORMANCE_ID 2
 
 #define MAX_READ_SIZE 16 /* Massima lunghezza di un intero scritto come testo. */
 #define INITIAL_INPUT_SIZE 128 /* Lunghezza inziale dell'array di input. */
@@ -174,16 +178,31 @@ int main(int argc, char* argv[])
 	}
 
     MPI_Bcast(&i_inputSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    /* Avvio di QuickSort. */
+
+    /* Avvio analisi delle prestazioni. */
+    /*
+        hpmInit(0, "BitonicSortVSQuickSort");
+        hpmStart(BITONIC_PERFORMANCE_ID, "BitonicSort");
+    */
+    /* Avvio di BitonicSort. */
 	ar_bitonic = bitonicSortManager(ar_bitonic, i_inputSize, i_rank, i_totalProcesses);
+    /*
+        hpmStop(BITONIC_PERFORMANCE_ID);
+        hpmStart(QUICK_PERFORMANCE_ID, "QuickSort");
+    */
+    /* Avvio di QuickSort. */
 	ar_quick = quickSortManager(ar_quick, i_inputSize, i_rank, i_totalProcesses);
+    /*
+        hpmStop(QUICK_PERFORMANCE_ID);
+        hpmTerminate(0);
+    */
 
     if (i_rank == 0)
     {
-	BOOL check = checkSorting(ar_bitonic, i_inputSize);
+	    BOOL check = checkSorting(ar_bitonic, i_inputSize);
         printf("ar_bitonic ordinato? %d\n", check);
-	    
-        BOOL check = checkSorting(ar_quick, i_inputSize);
+
+        check = checkSorting(ar_quick, i_inputSize);
         printf("ar_quick ordinato? %d\n", check);
     }
 
