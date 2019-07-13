@@ -2,6 +2,8 @@
 #ifndef BITONIC_SORT_H
 #define BITONIC_SORT_H
 
+#include <stdbool.h>
+
 #ifndef BOOL
 #define BOOL int
 #define TRUE 1
