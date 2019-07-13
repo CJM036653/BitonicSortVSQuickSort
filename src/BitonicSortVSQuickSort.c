@@ -122,13 +122,21 @@ int main(int argc, char* argv[])
                 {
                     i_currentInt = i_inputSize-1;
                     i_inputSize = i_inputSize << 1;
-                    ar_bitonic = realloc(ar_bitonic, i_inputSize * sizeof(int));
-                    if (ar_bitonic == NULL)
+                    int* ar_temp = malloc(sizeof(int) * i_inputSize);
+                    if (ar_temp == NULL)
                     {
                         printf(S_ALLOCATION_FAILED);
                         close(fd);
                         MPI_Abort(MPI_COMM_WORLD, ALLOCATION_FAILED);
                     }
+		    int i;
+                    int j = i_currentInt;
+                    for (i = i_inputSize - 1; i > i_currentInt; --i)
+                    {
+                        ar_temp[i] = ar_bitonic[j--];
+                    }
+                    free(ar_bitonic);
+                    ar_bitonic = ar_temp;
                 }
                 /* Viene letto un numero per riga. */
                 if (ar_readBuffer[i_currentChar] == '\n')
