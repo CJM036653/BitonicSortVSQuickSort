@@ -139,8 +139,6 @@ void mergeAndSplit(int in[], int rank, int r_min, int r_max, int num_keys)
 
 int* bitonicSortManager(int array[], int arraySize, int rank, int size)
 {
-    double timerStart, timerEnd;
-
     /* Divide the values equally between the processors */
     int num_keys = arraySize / size;
 
