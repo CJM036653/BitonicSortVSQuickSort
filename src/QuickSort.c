@@ -40,16 +40,11 @@ static int pivotChoice(int* ar, int i_arSize)
     i_1 = (rand() % i_arSize);
     i_2 = (rand() % i_arSize);
     i_3 = (rand() % i_arSize);
-    printf("--%d\n",i_1 );
-    printf("--%d\n",i_2 );
-    printf("--%d\n",i_3 );
+
     i_1 = ar[i_1];
     i_2 = ar[i_2];
     i_3 = ar[i_3];
-    printf("%d\n",i_1 );
-    printf("%d\n",i_2 );
-    printf("%d\n",i_3 );
-
+    
     if (i_1 > i_2)
     {
         i_max = (i_1 > i_3 ? i_1 : i_3);
