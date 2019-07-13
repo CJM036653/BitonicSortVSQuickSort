@@ -20,13 +20,9 @@ if the value is not found, otherwise it returns the index as usual */
 int binSearch(int value, int a[], int dim)
 {
   if(value < a[0])
-  {
     return 0;
-  }
   if(value > a[dim - 1])
-  {
     return dim;
-  }
 
   int lo = 0;
   int hi = dim - 1;
@@ -36,19 +32,12 @@ int binSearch(int value, int a[], int dim)
     int mid = (hi + lo) / 2;
 
     if (value < a[mid])
-    {
       hi = mid - 1;
-    }
     else if (value > a[mid])
-    {
       lo = mid + 1;
-    }
     else
-    {
       return mid;
-    }
   }
-
   return lo;
 }
 
