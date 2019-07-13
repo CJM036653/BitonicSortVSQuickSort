@@ -172,7 +172,6 @@ int phaseOneTwo(int* ar, int i_arSize, int i_rank, int i_totalProcesses, MPI_Com
 
         /*i_pivot = (ar[0] + ar[i_arSize - 1]) / 2;*/
 		i_pivot = pivotChoice(ar, i_arSize);
-        printf("Pivot: %d\n", i_pivot);
 	}
 	MPI_Bcast(&i_pivot, 1, MPI_INT, 0, communicator);
 
@@ -774,6 +773,8 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
         MPI_Isend(&i_startIndex, 1, MPI_INT, 0, START_INDEX_TAG, MPI_COMM_WORLD, &sndReq13);
         MPI_Isend(&i_currentSize, 1, MPI_INT, 0, SECTION_LENGTH_TAG, MPI_COMM_WORLD, &sndReq14);
         MPI_Isend(ar_currentAr, i_currentSize, MPI_INT, 0, FINAL_UPDATE_TAG, MPI_COMM_WORLD, &finalRequest);
+        MPI_Wait(&finalRequest, MPI_STATUS_IGNORE);
+        free(ar_currentAr);
     }
     else
     {
@@ -787,8 +788,11 @@ int* quickSortManager(int* ar, int i_arSize, int i_rank, int i_totalProcesses)
             MPI_Irecv(&ar[i_start], i_len, MPI_INT, i, FINAL_UPDATE_TAG, MPI_COMM_WORLD, &finalRequests[i]);
         }
         MPI_Waitall(i_totalProcesses-1, &finalRequests[1], MPI_STATUS_IGNORE);
+
+        free(ar_rootIndices);
     }
 
+    MPI_Comm_free(&communicator);
     return ar;
 }
 
