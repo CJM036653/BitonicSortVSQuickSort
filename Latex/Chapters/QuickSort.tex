@@ -1,79 +1,64 @@
 \chapter{Quicksort}
-Abbiamo implementato un algoritmo di ordinamento dei campioni tramite una versione parallela di Quicksort.
-I nostri esperimenti computazionali mostrano che Quicksort parallelo risulta essere piú veloce rispetto all'ordinamento del campione fatto in modo iterativo utilizzando un solo  Processore.
-L'algoritmo Quicksort parallelo che abbiamo implementato è una semplice estensione Quicksort, dove l'array di input viene suddiviso in parti uguali a tutti i processori, e ogni processore esegue una serie di Round che permettono di ordinare la parte assegnata ad ogni processore.
-Una volta finito un round, sincronizza la parte dell'array a lui assegnato, inviando una richiesta non bloccante al proprio root che permettera di proseguire al prossimo round. Queste richieste permetteranno la comunicazione dello stato dei processori e dell'aggiornamento del array di partenza, che a causa della assenza della memoria condivisa ogni processore non sa se altri processori lavorano su stesse locazioni di memoria.
-
 \section{Funzionamento generale}
-Quicksort è un algoritmo di ordinamento sequenziale ampiamente utilizzato grazie alla sua velocità e semplicità. Il suo nome significa ordinamento rapido e, infatti, è l'algoritmo di ordinamento con le prestazioni migliori, nel caso medio, tra quelli basati su confronto. È stato ideato da Charles Antony Richard Hoare nel 1961.\\ 
-Si tratta di un algoritmo ricorsivo che si basa sul paradigma \textit{Divide and Conquer} per ordinare tutti i valori: prima i dati vengono scomposti ricorsivamente in base ad un valore chiave chiamato \textit{pivot}. I valori minori o uguali al pivot saranno posizionati nella parte sinistra del sottoarray considerato, mentre i valori maggiori o uguali saranno posizionati nella parte di destra dello stesso. Infine i sottoarray vengono uniti per formare l'output dell'algoritmo. \\
+Quicksort è un algoritmo di ordinamento sequenziale ampiamente utilizzato grazie alla sua velocità e semplicità. Il suo nome significa "ordinamento rapido" e, infatti, è l'algoritmo di ordinamento con le prestazioni migliori, nel caso medio, tra quelli basati su confronto.
+Si tratta di un algoritmo ricorsivo che sfrutta il paradigma \textit{Divide and Conquer}: prima i dati vengono scomposti ricorsivamente in base ad un valore chiave chiamato \textit{pivot}. I valori minori o uguali al pivot saranno posizionati nella parte sinistra del sottoarray considerato, mentre i valori maggiori o uguali saranno posizionati nella parte destra dello stesso. Infine i sottoarray vengono uniti per formare l'output dell'algoritmo. \\
 
 \section{Implementazione parallela}
-La nostra implementazione parallela si basa sull'algoritmo presentato in \cite{PaperQuickSort}. In questo paper viene illustrato un algoritmo parallelo ricorsivo a memoria condivisa. Questo significa che i vari processi possono comunicare e interagire direttamente tramite la modifica di variabili condivise. Si tratta di un protocollo molto diverso da quello MPI e questo ha richiesto numerose modifiche all'algoritmo. Abbiamo, inoltre, reso l'algoritmo iterativo in modo da risparmiare memoria e da accelerare l'esecuzione.
+La nostra implementazione parallela si basa sull'algoritmo presentato in \cite{PaperQuickSort}. In questo paper viene illustrato un algoritmo parallelo ricorsivo a memoria condivisa. Questo significa che i vari processi possono comunicare e interagire direttamente tramite la modifica di variabili condivise. Si tratta di un protocollo molto diverso da quello MPI e questo ha richiesto numerose modifiche all'algoritmo. Abbiamo, inoltre, reso l'algoritmo iterativo in modo da risparmiare memoria e accelerare l'esecuzione.
 
-Supponiamo di dover ordinare un array con $N$ elementi, indicizzati da $0$ a $N-1$. Ad ogni processore viene assegnato un indice univoco, \texttt{PID}, che varia da $0$ a $P-1$.\\
+Supponiamo di dover ordinare un array con $N$ elementi, indicizzati da $0$ a $N-1$. Ad ogni processore viene assegnato un indice globale, \texttt{PID}, che varia da $0$ a $P-1$ (dove $P$ è il numero di processori a disposizione).\\
 L'algoritmo presentato consiste in 4 fasi:
 \begin{enumerate}
-\item partizionamento parallelo dei dati (\textit{\ref{subsect_Phase1}});
-\item partizionamento sequenziale dei dati (\textit{\ref{subsect_Phase2}});
-\item partizionamento dei processi (\textit{\ref{subsect_Phase3}});
-\item ordinamento sequenziale (\textit{\ref{subsect_Phase4}}).
+\item partizionamento parallelo dei dati (\textit{Sezione \ref{subsect_Phase1}});
+\item partizionamento sequenziale dei dati (\textit{Sezione \ref{subsect_Phase2}});
+\item partizionamento dei processi (\textit{Sezione \ref{subsect_Phase3}});
+\item ordinamento sequenziale (\textit{Sezione \ref{subsect_Phase4}}).
 \end{enumerate}
  
 \subsection{Fase 1: partizionamento parallelo dei dati} \label{subsect_Phase1}
+L'array di input viene idealmente suddiviso in blocchi di grandezza fissa (\texttt{BLOCK\_SIZE}). Per ottenere le massime prestazioni, \texttt{BLOCK\_SIZE} deve essere tale da consentire di memorizzare 2 blocchi nella cache di un singolo processore. Nel nostro caso abbiamo scelto di impostare \texttt{BLOCK\_SIZE = 2048} per garantire un comportamento corretto ed efficiente anche con file di input non troppo grandi.
 
-L'algoritmo legge in input una serie di dati come un insieme di blocchi consecutivi di dimensioni i\_arSize. 
-******* 
-i\_arSize dipende dalla dimensione del sistema cache di primo livello, ed è selezionata in modo che due blocchi di lunghezza B possano essere contenuti nella cache in corrispondenza di contemporaneamente. Nel nostro sistema in cui la dimensione della cache di primo livello è 16 KB, abbiamo selezionato
-B = 2048 in modo da essere in grado di adattare contemporaneamente due blocchi di dati nella cache. 
-***********
-
-Consideriamo prima di tutto il caso in cui tutti i valori possono essere divisi in blocchi, nel caso in cui un blocco non dovesse essere riempito completamente, eseguiremo il padding della parte rimante per completare il blocco. \\
-L'intero array può essere visto come una linea di N blocchi di dati; il processore P0 sceglie i blocchi su cui lavorare, dalle due estremità della linea.
-La prima fase inizia con il processore P 0 , quello con il pid più piccolo, successivamente,il processore P0 invia ad ogni processore il blocco che trova fine del lato sinistro e poi il blocco che trova alla fine del lato destro e usa questi due blocchi insieme con il pivot come input per una funzione chiamata neutralize. La funzione prende come input due blocchi, ar\_left e ar\_right e i\_pivot, nel nostro caso abbiamo implementato la funzione "PivotChoice" che seleziona 3 valori rand presi nel nostro array e calcola la media del massimo e minimo valore scelto. Una volta trovato il pivot, scambia i valori in leftblock se sono più grandi del pivot con i valori del blocco di destra che sono più piccoli del pivot. \\
-La chiamata del neutralize avrà uno dei seguenti risultati:
-
+Una volta scelto un pivot (unico per tutti i processi, per dettagli sulla scelta si veda la Fase 4, \textit{Sezione \ref{subsect_Phase4}}), ogni processo preleva un blocco dall'estremità sinistra dell'array e uno da quella destra. Su questi due blocchi viene eseguita una neutralizzazione, che consiste nell'invertire gli elementi tra i due blocchi in modo che nel blocco di sinistra risultino unicamente elementi $x_i \le pivot$ e in quello di destra $x_i \ge pivot$.
+Quando tutti gli elementi di almeno uno dei due blocchi rispettano la specifica precedente, la neutralizzazione è completa. A questo punto si possono presentare 3 casi:
 \begin{itemize}
-\item Tutti i valori nel blocco di sinistra saranno inferiori al pivot, in questo caso diciamo quel leftblock è stato neutralizzato
-\item Tutti i valori nel blocco di destra saranno più grandi o uguali
-del pivot, diciamo che il blocco di destra è stato neutralizzato
-\item Sia leftblock che rightblock sono stati neutralizzati allo stesso
-tempo
+\item Viene neutralizzato il blocco di sinistra. In questo caso il processo preleva il primo blocco disponibile dalla parte sinistra dell'array.
+\item Viene neutralizzato il blocco di destra. In questo caso viene prelevato il primo blocco disponibile dalla parte destra dell'array.
+\item Vengono neutralizzati entrambi i blocchi. In questo caso il processo preleva nuovamente un blocco a sinistra e uno a destra.
 \end{itemize}
- 
-Una volta conclusa la prima chiamata di neutralize, ogni processore cercherà quindi di ottenere un nuovo blocco dal lato sinistro dell'array se il suo blocco di sinistra è stato neutralizzato prima, o dal lato destro se il suo blocco di destra è stato neutralizzato prima e neutralizzerà il nuovo blocco con quello appena consegnato dal Processore P0. Se entrambi i blocchi sono stati neutralizzati, il processore P0 invierà i blocchi da entrambe le estremità. I processori continuano i passaggi precedenti fino a quando non completano tutti i blocchi. Infine avremo che, ogni processore ha al massimo un blocco non neutralizzato
-e invia la sua copia al processore P0 che si occuperera ad aggiornare l'array iniziale.
-Una volta aggiornato tutto l'array,i processori inviano a P0 un numero che contiene i blocchi di sinistra che sono stati neutralizzati, LN (Neutralizzato a sinistra) e un numero che contiene blocchi di destra che sono stati neutralizzati, RN (Neutralizzato a destra).\\
-In questo caso ci saranno al massimo MAX\_PROCESSORS di blocchi.
+Se erano disponibili blocchi sufficienti, il processo ripete la neutralizzazione con i due blocchi a sua disposizione, altrimenti termina la computazione.
+Nel caso che l'array non sia divisibile per \texttt{BLOCK\_SIZE} gli elementi rimanenti vengono lasciati per la Fase 2 (\textit{Sezione \ref{subsect_Phase2}}).
+
+La nostra implementazione, non avendo a disposizione un array condiviso, adotta un approccio Master-Slave. Il processo con \texttt{PID = 0} (rispetto al comunicatore corrente, per dettagli si veda la Fase 3, \textit{Sezione \ref{subsect_Phase3}}) ricopre il ruolo di Master, mentre gli altri diventano Slave.
+Ad ogni iterazione di questa fase, se sono disponibili blocchi, questi vengono assegnati e inviati ai vari Slave. Al termine della computazione, i blocchi neutralizzati vengono inviati al Master per aggiornare l'array e tutti i processori attendono prima di iniziare una nuova iterazione.
+Se non sono disponibili più blocchi, viene aggiornato anche l'ultimo blocco non neutralizzato.
+
 
 \subsection{Fase 2: partizionamento sequenziale dei dati} \label{subsect_Phase2}
-
-Lo scopo del secondo round è terminare ciò che è iniziato nella partizione parallela.
-Quando la partizione parallela completa di neutralizzare i blocchi, ci troveremo con parti di blocchi  compresi tra [0, LN - 1) e [RN, N - 1), i quali risultano essere ordinati correttamente rispetto al pivot. I restanti blocchi P che possono essere posizionati in qualsiasi posizione sull'array come mostrato nella figura;
-
-
-
-Devono essere posizionati al centro dell array, [LN - 1, RN], e se all'interno del intervallo si trovano blocchi gia neutralizzati allora devono essere scambiati con quelli non neuralizzati. Durante questo  round il processore P0 prima ordina i P blocchi,e successivamente selezionare un blocco da sinistra e un blocco da destra e utilizza funzione neutralize insieme al pivot precedentemente selezionato, ed esegue la funzione fino a quando tutti i blocchi rimanenti sono esauriti.
- 
-Dopo le due fasi di partizione,l'array verrà suddiviso in due array, SplitPoint, i valori minori del pivot si troveranno nel primo array mentre gli altri valori nel secondo array.
+Lo scopo della seconda fase è terminare ciò che è stato iniziato nella Fase 1 \textit{Sezione \ref{subsect_Phase1}}, cioè suddividere gli elementi dell'array in due parti: la parte sinistra, minore o uguale del pivot, e quella destra, maggiore o uguale del pivot. Questo viene fatto dal Master della Fase 1, mentre gli altri processi attendono il risultato della computazione, che sarà il punto di stacco tra le due parti dell'array (chiamato \textit{split point}).
+La Fase 2 è composta da 3 sotto-fasi:
+\begin{itemize}
+\item Neutralizzazione dei blocchi rimanenti (finchè possibile);
+\item Spostamento dei blocchi non ancora neutralizzati nella parte centrale dell'array in modo che siano tutti contigui;
+\item Partizionamento degli elementi nella parte centrale rispetto al pivot.
+\end{itemize}
+Al termine, lo \textit{split point} verrà comunicato a tutti i processi del comunicatore.
 
 
 \subsection{Fase 3: partizionamento dei processi} \label{subsect_Phase3}
+Questa fase consiste nel partizionamento dei processi in due gruppi, che ripeteranno iterativamente le fasi 1, 2 e 3, ognuno su una delle due parti in cui è stato precedentemente suddiviso l'array. Le dimensioni dei gruppi di processi sono proporzionate alle dimensioni dei sottoarray.
+Definiti i gruppi, questi ripartono (ognuno sul proprio array) con la Fase 1, a meno che il gruppo non sia formato da un unico processo. In questo caso, il suddetto processo passa direttamente alla Fase 4 (\textit{Sezione \ref{subsect_Phase4}}).
 
-Durante questa fase, l'algoritmo divide tutti processori in due gruppi.
-Le dimensioni di questi gruppi sono proporzionali alle dimensioni dei sottoarray.
+Per implementare questa fase con MPI, è stato necessario adottare nuovamente un approccio Master-Slave, diverso però da quello delle fasi precedenti. Per ogni gruppo di processi, infatti, viene definito un nuovo comunicatore, che servirà per la struttura Master-Slave delle fasi 1 e 2. Nella fase 3, invece, il Master è sempre il processo 0 (che chiameremo \texttt{P0}) rispetto al comunicatore globale.
 
-  int i\_L1 = i\_splitPoint; /* Grandezza del blocco di sinistra. */
-  int i\_L2 = i\_currentSize - i\_L1; /* Grandezza del blocco di destra. */
-  int i\_P2 = round((i\_L2 * i\_groupSize)/i\_currentSize); /* Numero di processi della parte di destra. */
-    		
-
-Se la dimensione di un gruppo è zero, allora tutti i processori lavoreranno sull altro array.
-Una volta distribuiti i processori, il round 3 consiste nell'applicare lo stesso metodo di partizione parallela, del Round Uno al Round tre, in modo ricorsivo.
-Quando viene assegnato un solo processore a un sottoarray, il processore uscirà dal Round tre.
+Dopo le fasi precedenti, per prima cosa  \texttt{P0} riceve gli ultimi aggiornamenti dai Master dei vari gruppi. In seguito, invia ai Master dell'iterazione successiva e ai processi in uscita dalla Fase 3 le rispettive sezioni dell'array, mentre i vari Slave attendono il nuovo inizio della Fase 1.
+Anche se  \texttt{P0} rimane in gruppo solo con se stesso rimane nella Fase 3 fino all'uscita di tutti gli altri processi in modo da perpetuare la propria funzione di Master.
 
 
 \subsection{Fase 4: ordinamento sequenziale} \label{subsect_Phase4}
+A questo punto ogni processo procede all'applicazione della versione sequenziale di Quicksort sul proprio sottoarray e, al termine, invia i risultati a  \texttt{P0}.
+Secondo \cite{PaperQuickSort}, quando un processo termina l'ordinamento della propria sezione, procede ad aiutare i processi ancora in attività nella Fase 4 accedendo direttamente alle loro variabili. 
 
-Durante la fase di ordinamenti iterativo, ogni processore utilizza quicksort per ordinare il sottoarray ottenuto dalla fase tre. 
+Ottenere lo stesso livello di interazione in MPI sarebbe stato molto impegnativo dal punto di vista implementativo, quindi abbiamo scelto di lasciare che ogni processo proceda indipendentemente dagli altri. Per compensare, però, e ottenere comunque una buona suddivisione del carico, nella Fase 1 (\textit{Sezione \ref{subsect_Phase1}}) abbiamo effettuato una scelta del pivot particolarmente costosa che tiene in considerazione la media tra il massimo e il minimo valore di una sequenza di 3 elementi casuali presi dall'input.
+
+In pratica, la suddivisione si è rivelata generalmente equa. Essendo questa, però, una scelta costosa, nell'implementazione sequenziale di Quicksort abbiamo optato per una scelta molto più rapida: la media tra il primo e l'ultimo elemento dell'array. Inoltre, per velocizzare ulteriormente la Fase 4, abbiamo adottato un approccio ibrido che, sotto un certo numero di elementi (in seguito ad analisi sperimentali questa soglia è stata posta a 30 elementi),  sfrutta Insertionsort . Questo algoritmo, infatti, ha un overhead minore di Quicksort e, per input così piccoli, risulta più rapido.
 
