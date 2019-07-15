@@ -1,4 +1,17 @@
-\chapter{QuickSort}
+\chapter{Quicksort}
+Abbiamo implementato un algoritmo di ordinamento dei campioni tramite una versione parallela di Quicksort.
+I nostri esperimenti computazionali mostrano che Quicksort parallelo risulta essere piú veloce rispetto all'ordinamento del campione fatto in modo iterativo utilizzando un solo  Processore.
+L'algoritmo Quicksort parallelo che abbiamo implementato è una semplice estensione Quicksort, dove l'array di input viene suddiviso in parti uguali a tutti i processori, e ogni processore esegue una serie di Round che permettono di ordinare la parte assegnata ad ogni processore.
+Una volta finito un round, sincronizza la parte dell'array a lui assegnato, inviando una richiesta non bloccante al proprio root che permettera di proseguire al prossimo round. Queste richieste permetteranno la comunicazione dello stato dei processori e dell'aggiornamento del array di partenza, che a causa della assenza della memoria condivisa ogni processore non sa se altri processori lavorano su stesse locazioni di memoria.
+
+
+Quicksort è un algoritmo di ordinamento sequenziale ampiamente utilizzato grazie alla sua velocità e semplicità. Il suo nome significa ordinamento rapido e, infatti, è l'algoritmo di ordinamento con le prestazioni migliori, nel caso medio, tra quelli basati su confronto. È stato ideato da Charles Antony Richard Hoare nel 1961.\\ 
+Si tratta di un algoritmo ricorsivo che si basa sul paradigma "Divide and Conquer" per ordinare tutti i valori: prima i dati vengono scomposti ricorsivamente in base ad un valore chiave chiamato \texttt{pivot}, tale procedura viene chiamata Partition, preleva prima un pivot da una struttura dati, trova la sua posizione nell'elenco in cui deve essere posizionata. \\
+Avremo due possibilità:
+\begin{itemize}
+\item I valori minori del pivot saranno posizionati nella parte sinistra dell'array
+\item I valori maggiori o uguali saranno posizionati nella parte di destra dell'array
+\end{itemize}
 
 Supponiamo di disporre un array con N elementi, indicizzato da 0 a N-1 (i\_arSize), da ordinare su un multiprocessore a memoria non condivisa, con processori asincroni MAX\_PROCESSORS. 
 Ad ogni processore viene assegnato un indice univoco, pid, da 0 a P-1 (\_rank).\\

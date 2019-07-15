@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.20 (MiKTeX 2.9.7050 64-bit) (preloaded format=pdflatex 2019.7.15)  15 JUL 2019 16:53
+This is pdfTeX, Version 3.14159265-2.6-1.40.20 (MiKTeX 2.9.7050 64-bit) (preloaded format=pdflatex 2019.7.15)  15 JUL 2019 17:10
 entering extended mode
 **./BitonicSortVSQuickSort.tex
 (BitonicSortVSQuickSort.tex
@@ -948,7 +948,7 @@ LaTeX Info: Redefining \nameref on input line 89.
 \@outlinefile=\write3
 \openout3 = `BitonicSortVSQuickSort.out'.
 
-<./Images/Utility/UNIPD.png, id=11, 80.7486pt x 80.7486pt>
+<./Images/Utility/UNIPD.png, id=39, 80.7486pt x 80.7486pt>
 File: ./Images/Utility/UNIPD.png Graphic file (type png)
 <use ./Images/Utility/UNIPD.png>
 Package pdftex.def Info: ./Images/Utility/UNIPD.png  used on input line 98.
@@ -982,70 +982,54 @@ ility/UNIPD.png>] (BitonicSortVSQuickSort.toc)
 ]
 (Chapters/DescrizioneProblema.tex
 Capitolo 1.
-) (Chapters/DescrizioneAlgoritmo.tex [1
+) (Chapters/BitonicSort.tex [1
 
 
 
 ]
 Capitolo 2.
-) (Chapters/BitonicSort.tex [2
+) (Chapters/QuickSort.tex [2
 
 ]
 Capitolo 3.
-) (Chapters/QuickSort.tex [3
+[3
 
-]
+] [4]) (Chapters/Prestazioni.tex [5]
 Capitolo 4.
-
-Overfull \hbox (7.8294pt too wide) in paragraph at lines 3--7
-\T1/cmr/m/n/10 Supponiamo di di-spor-re un ar-ray con N ele-men-ti, in-di-ciz-z
-a-to da 0 a N-1 (i_arSize),
- []
-
-[4
-
-] [5]) (Chapters/Prestazioni.tex [6]
-Capitolo 5.
-) (Chapters/Conclusioni.tex [7
+) (Chapters/Conclusioni.tex [6
 
 ]
-Capitolo 6.
-) (Chapters/Bibliografia.tex [8
+Capitolo 5.
+) (Chapters/Bibliografia.tex [7
 
 ]
 
 LaTeX Warning: Empty `thebibliography' environment on input line 3.
 
 )
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 161.
- [9
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 160.
+ [8
 
 ]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 161.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 160.
  (BitonicSortVSQuickSort.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 161.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 161.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 160.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 160.
+Package rerunfilecheck Info: File `BitonicSortVSQuickSort.out' has not changed.
 
-
-Package rerunfilecheck Warning: File `BitonicSortVSQuickSort.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `BitonicSortVSQuickSort.out':
-(rerunfilecheck)             Before: 67DAFCE744508B021BD9DA684DD524FD;116
-(rerunfilecheck)             After:  71B2321142C4C9B8994263661740FA6C;647.
+(rerunfilecheck)             Checksum: 8783F04C1D45218F71FAFD512354C6B5;577.
  ) 
 Here is how much of TeX's memory you used:
- 24414 strings out of 492895
- 445061 string characters out of 3133479
- 614676 words of memory out of 3000000
- 28049 multiletter control sequences out of 15000+200000
+ 24416 strings out of 492895
+ 445002 string characters out of 3133479
+ 615676 words of memory out of 3000000
+ 28056 multiletter control sequences out of 15000+200000
  544945 words of font info for 47 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
  44i,12n,63p,813b,803s stack positions out of 5000i,500n,10000p,200000b,50000s
  <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour/jknappen/ec/dpi600\
-ecsl1000.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour/jknappen/
-ec/dpi600\ecbx1440.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour
+ecbx1440.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour/jknappen/
+ec/dpi600\ecsl1000.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour
 /jknappen/ec/dpi600\tcrm1000.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts
 /pk/ljfour/jknappen/ec/dpi600\ecbx2074.pk> <C:\Users\david\AppData\Local\MiKTeX
 \2.9\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1000.pk> <C:\Users\david\AppData\Lo
@@ -1057,9 +1041,9 @@ pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour/jknappen/ec/dpi600
 /ec/dpi600\ecti1440.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\fonts/pk/ljfou
 r/jknappen/ec/dpi600\eccc1440.pk> <C:\Users\david\AppData\Local\MiKTeX\2.9\font
 s/pk/ljfour/jknappen/ec/dpi600\ecxc1440.pk>
-Output written on BitonicSortVSQuickSort.pdf (11 pages, 146188 bytes).
+Output written on BitonicSortVSQuickSort.pdf (10 pages, 148652 bytes).
 PDF statistics:
- 406 PDF objects out of 1000 (max. 8388607)
- 30 named destinations out of 1000 (max. 500000)
- 22 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 432 PDF objects out of 1000 (max. 8388607)
+ 28 named destinations out of 1000 (max. 500000)
+ 78 words of extra memory for PDF output out of 10000 (max. 10000000)
 
