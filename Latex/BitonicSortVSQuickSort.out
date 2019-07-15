@@ -1,3 +1,10 @@
-\BOOKMARK [0][-]{chapter.1}{Chapters/Indice}{}% 1
-\BOOKMARK [0][-]{chapter.2}{Descrizione del Problema}{}% 2
-\BOOKMARK [0][-]{chapter.3}{DescrizioneAlgoritmo}{}% 3
+\BOOKMARK [0][-]{chapter.1}{Descrizione del Problema}{}% 1
+\BOOKMARK [0][-]{chapter.2}{DescrizioneAlgoritmo}{}% 2
+\BOOKMARK [0][-]{chapter.3}{Bitonic Sort}{}% 3
+\BOOKMARK [0][-]{chapter.4}{QuickSort}{}% 4
+\BOOKMARK [1][-]{section.4.1}{Round 1: Partizione parallela dei dati}{chapter.4}% 5
+\BOOKMARK [1][-]{section.4.2}{Round 2: partizione sequenziale dei dati}{chapter.4}% 6
+\BOOKMARK [1][-]{section.4.3}{Round 3: partizione del processo}{chapter.4}% 7
+\BOOKMARK [1][-]{section.4.4}{Round 4: l'Ordinamento iterativo in parallelo}{chapter.4}% 8
+\BOOKMARK [0][-]{chapter.5}{Prestazioni}{}% 9
+\BOOKMARK [0][-]{chapter.6}{Conclusioni}{}% 10

@@ -1,9 +1,7 @@
 \chapter{QuickSort}
 
-\begin{document}
-
-Supponiamo di disporre un array con N elementi, indicizzato da 0 a N-1 (i_arSize), da ordinare su un multiprocessore a memoria non condivisa, con processori asincroni MAX_PROCESSORS. 
-Ad ogni processore viene assegnato un ndice univoco, pid, da 0 a P-1 (i_rank).\\
+Supponiamo di disporre un array con N elementi, indicizzato da 0 a N-1 (i\_arSize), da ordinare su un multiprocessore a memoria non condivisa, con processori asincroni MAX\_PROCESSORS. 
+Ad ogni processore viene assegnato un indice univoco, pid, da 0 a P-1 (\_rank).\\
 L'algoritmo parallelo Quicksort presentato è una parallelizzazione del Quicksort. È un algoritmo a 3 + 1 round. I primi 3 round costituiscono il divide la fase e sono eseguiti in modo ricorsivo. L'ultima fase è un ordinamento iterativo dell'algoritmo che i processori eseguono in parallelo.\\
 Le quattro fasi sono:
 \begin{enumerate}
@@ -13,17 +11,17 @@ Le quattro fasi sono:
 \item l'Ordinamento iterativo in parallelo 
 \end{enumerate}
  
-\maketitle Round 1:Partizione parallela dei dati
+\section{Round 1: Partizione parallela dei dati}
 
-L'algoritmo legge in input una serie di dati come un insieme di blocchi consecutivi di dimensioni i_arSize. 
+L'algoritmo legge in input una serie di dati come un insieme di blocchi consecutivi di dimensioni i\_arSize. 
 ******* 
-i_arSize dipende dalla dimensione del sistema cache di primo livello, ed è selezionata in modo che due blocchi di lunghezza B possano essere contenuti nella cache in corrispondenza di contemporaneamente. Nel nostro sistema in cui la dimensione della cache di primo livello è 16 KB, abbiamo selezionato
+i\_arSize dipende dalla dimensione del sistema cache di primo livello, ed è selezionata in modo che due blocchi di lunghezza B possano essere contenuti nella cache in corrispondenza di contemporaneamente. Nel nostro sistema in cui la dimensione della cache di primo livello è 16 KB, abbiamo selezionato
 B = 2048 in modo da essere in grado di adattare contemporaneamente due blocchi di dati nella cache. 
 ***********
 
 Consideriamo prima di tutto il caso in cui tutti i valori possono essere divisi in blocchi, nel caso in cui un blocco non dovesse essere riempito completamente, eseguiremo il padding della parte rimante per completare il blocco. \\
 L'intero array può essere visto come una linea di N blocchi di dati; il processore P0 sceglie i blocchi su cui lavorare, dalle due estremità della linea.
-La prima fase inizia con il processore P 0 , quello con il pid più piccolo, successivamente,il processore P0 invia ad ogni processore il blocco che trova fine del lato sinistro e poi il blocco che trova alla fine del lato destro e usa questi due blocchi insieme con il pivot come input per una funzione chiamata neutralize. La funzione prende come input due blocchi, ar_left e ar_right e i_pivot, nel nostro caso abbiamo implementato la funzione "PivotChoice" che seleziona 3 valori rand presi nel nostro array e calcola la media del massimo e minimo valore scelto. Una volta trovato il pivot, scambia i valori in leftblock se sono più grandi del pivot con i valori del blocco di destra che sono più piccoli del pivot. \\
+La prima fase inizia con il processore P 0 , quello con il pid più piccolo, successivamente,il processore P0 invia ad ogni processore il blocco che trova fine del lato sinistro e poi il blocco che trova alla fine del lato destro e usa questi due blocchi insieme con il pivot come input per una funzione chiamata neutralize. La funzione prende come input due blocchi, ar\_left e ar\_right e i\_pivot, nel nostro caso abbiamo implementato la funzione "PivotChoice" che seleziona 3 valori rand presi nel nostro array e calcola la media del massimo e minimo valore scelto. Una volta trovato il pivot, scambia i valori in leftblock se sono più grandi del pivot con i valori del blocco di destra che sono più piccoli del pivot. \\
 La chiamata del neutralize avrà uno dei seguenti risultati:
 
 \begin{itemize}
@@ -37,11 +35,11 @@ tempo
 Una volta conclusa la prima chiamata di neutralize, ogni processore cercherà quindi di ottenere un nuovo blocco dal lato sinistro dell'array se il suo blocco di sinistra è stato neutralizzato prima, o dal lato destro se il suo blocco di destra è stato neutralizzato prima e neutralizzerà il nuovo blocco con quello appena consegnato dal Processore P0. Se entrambi i blocchi sono stati neutralizzati, il processore P0 invierà i blocchi da entrambe le estremità. I processori continuano i passaggi precedenti fino a quando non completano tutti i blocchi. Infine avremo che, ogni processore ha al massimo un blocco non neutralizzato
 e invia la sua copia al processore P0 che si occuperera ad aggiornare l'array iniziale.
 Una volta aggiornato tutto l'array,i processori inviano a P0 un numero che contiene i blocchi di sinistra che sono stati neutralizzati, LN (Neutralizzato a sinistra) e un numero che contiene blocchi di destra che sono stati neutralizzati, RN (Neutralizzato a destra).\\
-In questo caso ci saranno al massimo MAX_PROCESSORS di blocchi.
+In questo caso ci saranno al massimo MAX\_PROCESSORS di blocchi.
 
-\maketitle Round 2: partizione sequenziale dei dati
+\section{Round 2: partizione sequenziale dei dati} 
 
-Lo scopo del secondo round è terminare ciò che è iniziatao nella partizione parallela.
+Lo scopo del secondo round è terminare ciò che è iniziato nella partizione parallela.
 Quando la partizione parallela completa di neutralizzare i blocchi, ci troveremo con parti di blocchi  compresi tra [0, LN - 1) e [RN, N - 1), i quali risultano essere ordinati correttamente rispetto al pivot. I restanti blocchi P che possono essere posizionati in qualsiasi posizione sull'array come mostrato nella figura;
 
 
@@ -51,13 +49,14 @@ Devono essere posizionati al centro dell array, [LN - 1, RN], e se all'interno d
 Dopo le due fasi di partizione,l'array verrà suddiviso in due array, SplitPoint, i valori minori del pivot si troveranno nel primo array mentre gli altri valori nel secondo array.
 
 
-\maketitle Round 3: partizione del processo. 
+\section{Round 3: partizione del processo}
+
 Durante questa fase, l'algoritmo divide tutti processori in due gruppi.
 Le dimensioni di questi gruppi sono proporzionali alle dimensioni dei sottoarray.
 
-  int i_L1 = i_splitPoint; /* Grandezza del blocco di sinistra. */
-  int i_L2 = i_currentSize - i_L1; /* Grandezza del blocco di destra. */
-  int i_P2 = round((i_L2 * i_groupSize)/i_currentSize); /* Numero di processi della parte di destra. */
+  int i\_L1 = i\_splitPoint; /* Grandezza del blocco di sinistra. */
+  int i\_L2 = i\_currentSize - i\_L1; /* Grandezza del blocco di destra. */
+  int i\_P2 = round((i\_L2 * i\_groupSize)/i\_currentSize); /* Numero di processi della parte di destra. */
     		
 
 Se la dimensione di un gruppo è zero, allora tutti i processori lavoreranno sull altro array.
@@ -65,9 +64,7 @@ Una volta distribuiti i processori, il round 3 consiste nell'applicare lo stesso
 Quando viene assegnato un solo processore a un sottoarray, il processore uscirà dal Round tre.
 
 
-\maketitle Round 4: l'Ordinamento iterativo in parallelo
+\section{Round 4: l'Ordinamento iterativo in parallelo}
 
 Durante la fase di ordinamenti iterativo, ogni processore utilizza quicksort per ordinare il sottoarray ottenuto dalla fase tre. 
 
-
-\end{document}
