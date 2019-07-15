@@ -1,4 +1,5 @@
 \babel@toc {italian}{}
 \babel@toc {italian}{}
-\contentsline {chapter}{\numberline {1}Descrizione del Problema}{1}{chapter.1}
-\contentsline {chapter}{\numberline {2}Descrizione dell'algoritmo}{2}{chapter.2}
+\contentsline {chapter}{\numberline {1}Chapters/Indice}{1}{chapter.1}
+\contentsline {chapter}{\numberline {2}Descrizione del Problema}{2}{chapter.2}
+\contentsline {chapter}{\numberline {3}DescrizioneAlgoritmo}{3}{chapter.3}
