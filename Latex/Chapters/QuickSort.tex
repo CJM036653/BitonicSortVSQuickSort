@@ -4,27 +4,23 @@ I nostri esperimenti computazionali mostrano che Quicksort parallelo risulta ess
 L'algoritmo Quicksort parallelo che abbiamo implementato è una semplice estensione Quicksort, dove l'array di input viene suddiviso in parti uguali a tutti i processori, e ogni processore esegue una serie di Round che permettono di ordinare la parte assegnata ad ogni processore.
 Una volta finito un round, sincronizza la parte dell'array a lui assegnato, inviando una richiesta non bloccante al proprio root che permettera di proseguire al prossimo round. Queste richieste permetteranno la comunicazione dello stato dei processori e dell'aggiornamento del array di partenza, che a causa della assenza della memoria condivisa ogni processore non sa se altri processori lavorano su stesse locazioni di memoria.
 
-
+\section{Funzionamento generale}
 Quicksort è un algoritmo di ordinamento sequenziale ampiamente utilizzato grazie alla sua velocità e semplicità. Il suo nome significa ordinamento rapido e, infatti, è l'algoritmo di ordinamento con le prestazioni migliori, nel caso medio, tra quelli basati su confronto. È stato ideato da Charles Antony Richard Hoare nel 1961.\\ 
-Si tratta di un algoritmo ricorsivo che si basa sul paradigma "Divide and Conquer" per ordinare tutti i valori: prima i dati vengono scomposti ricorsivamente in base ad un valore chiave chiamato \texttt{pivot}, tale procedura viene chiamata Partition, preleva prima un pivot da una struttura dati, trova la sua posizione nell'elenco in cui deve essere posizionata. \\
-Avremo due possibilità:
-\begin{itemize}
-\item I valori minori del pivot saranno posizionati nella parte sinistra dell'array
-\item I valori maggiori o uguali saranno posizionati nella parte di destra dell'array
-\end{itemize}
+Si tratta di un algoritmo ricorsivo che si basa sul paradigma \textit{Divide and Conquer} per ordinare tutti i valori: prima i dati vengono scomposti ricorsivamente in base ad un valore chiave chiamato \textit{pivot}. I valori minori o uguali al pivot saranno posizionati nella parte sinistra del sottoarray considerato, mentre i valori maggiori o uguali saranno posizionati nella parte di destra dello stesso. Infine i sottoarray vengono uniti per formare l'output dell'algoritmo. \\
 
-Supponiamo di disporre un array con N elementi, indicizzato da 0 a N-1 (i\_arSize), da ordinare su un multiprocessore a memoria non condivisa, con processori asincroni MAX\_PROCESSORS. 
-Ad ogni processore viene assegnato un indice univoco, pid, da 0 a P-1 (\_rank).\\
-L'algoritmo parallelo Quicksort presentato è una parallelizzazione del Quicksort. È un algoritmo a 3 + 1 round. I primi 3 round costituiscono il divide la fase e sono eseguiti in modo ricorsivo. L'ultima fase è un ordinamento iterativo dell'algoritmo che i processori eseguono in parallelo.\\
-Le quattro fasi sono:
+\section{Implementazione parallela}
+La nostra implementazione parallela si basa sull'algoritmo presentato in \cite{PaperQuickSort}. In questo paper viene illustrato un algoritmo parallelo ricorsivo a memoria condivisa. Questo significa che i vari processi possono comunicare e interagire direttamente tramite la modifica di variabili condivise. Si tratta di un protocollo molto diverso da quello MPI e questo ha richiesto numerose modifiche all'algoritmo. Abbiamo, inoltre, reso l'algoritmo iterativo in modo da risparmiare memoria e da accelerare l'esecuzione.
+
+Supponiamo di dover ordinare un array con $N$ elementi, indicizzati da $0$ a $N-1$. Ad ogni processore viene assegnato un indice univoco, \texttt{PID}, che varia da $0$ a $P-1$.\\
+L'algoritmo presentato consiste in 4 fasi:
 \begin{enumerate}
-\item la Partizione parallela dei Dati 
-\item la Partizione sequenziale dei dati
-\item la fase di partizione del processo (fase Ricorsiva del Round 1 e 2)
-\item l'Ordinamento iterativo in parallelo 
+\item partizionamento parallelo dei dati (\textit{\ref{subsect_Phase1}});
+\item partizionamento sequenziale dei dati (\textit{\ref{subsect_Phase2}});
+\item partizionamento dei processi (\textit{\ref{subsect_Phase3}});
+\item ordinamento sequenziale (\textit{\ref{subsect_Phase4}}).
 \end{enumerate}
  
-\section{Round 1: Partizione parallela dei dati}
+\subsection{Fase 1: partizionamento parallelo dei dati} \label{subsect_Phase1}
 
 L'algoritmo legge in input una serie di dati come un insieme di blocchi consecutivi di dimensioni i\_arSize. 
 ******* 
@@ -50,7 +46,7 @@ e invia la sua copia al processore P0 che si occuperera ad aggiornare l'array in
 Una volta aggiornato tutto l'array,i processori inviano a P0 un numero che contiene i blocchi di sinistra che sono stati neutralizzati, LN (Neutralizzato a sinistra) e un numero che contiene blocchi di destra che sono stati neutralizzati, RN (Neutralizzato a destra).\\
 In questo caso ci saranno al massimo MAX\_PROCESSORS di blocchi.
 
-\section{Round 2: partizione sequenziale dei dati} 
+\subsection{Fase 2: partizionamento sequenziale dei dati} \label{subsect_Phase2}
 
 Lo scopo del secondo round è terminare ciò che è iniziato nella partizione parallela.
 Quando la partizione parallela completa di neutralizzare i blocchi, ci troveremo con parti di blocchi  compresi tra [0, LN - 1) e [RN, N - 1), i quali risultano essere ordinati correttamente rispetto al pivot. I restanti blocchi P che possono essere posizionati in qualsiasi posizione sull'array come mostrato nella figura;
@@ -62,7 +58,7 @@ Devono essere posizionati al centro dell array, [LN - 1, RN], e se all'interno d
 Dopo le due fasi di partizione,l'array verrà suddiviso in due array, SplitPoint, i valori minori del pivot si troveranno nel primo array mentre gli altri valori nel secondo array.
 
 
-\section{Round 3: partizione del processo}
+\subsection{Fase 3: partizionamento dei processi} \label{subsect_Phase3}
 
 Durante questa fase, l'algoritmo divide tutti processori in due gruppi.
 Le dimensioni di questi gruppi sono proporzionali alle dimensioni dei sottoarray.
@@ -77,7 +73,7 @@ Una volta distribuiti i processori, il round 3 consiste nell'applicare lo stesso
 Quando viene assegnato un solo processore a un sottoarray, il processore uscirà dal Round tre.
 
 
-\section{Round 4: l'Ordinamento iterativo in parallelo}
+\subsection{Fase 4: ordinamento sequenziale} \label{subsect_Phase4}
 
 Durante la fase di ordinamenti iterativo, ogni processore utilizza quicksort per ordinare il sottoarray ottenuto dalla fase tre. 
 
