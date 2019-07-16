@@ -1,6 +1,6 @@
-\chapter{Quicksort} \label{chap.QuickSort}
+\chapter{Quick Sort} \label{chap.QuickSort}
 \section{Funzionamento generale}
-Quicksort è un algoritmo di ordinamento sequenziale ampiamente utilizzato grazie alla sua velocità e semplicità. Il suo nome significa "ordinamento rapido" e, infatti, è l'algoritmo di ordinamento con le prestazioni migliori, nel caso medio, tra quelli basati su confronto.
+Quick Sort è un algoritmo di ordinamento sequenziale ampiamente utilizzato grazie alla sua velocità e semplicità. Il suo nome significa "ordinamento rapido" e, infatti, è l'algoritmo di ordinamento con le prestazioni migliori, nel caso medio, tra quelli basati su confronto.
 Si tratta di un algoritmo ricorsivo che sfrutta il paradigma \textit{Divide and Conquer}: prima i dati vengono scomposti ricorsivamente in base ad un valore chiave chiamato \textit{pivot}. I valori minori o uguali al pivot saranno posizionati nella parte sinistra del sottoarray considerato, mentre i valori maggiori o uguali saranno posizionati nella parte destra dello stesso. Infine i sottoarray vengono uniti per formare l'output dell'algoritmo. \\
 
 \section{Implementazione parallela}
@@ -55,10 +55,10 @@ Anche se  \texttt{P0} rimane in gruppo solo con se stesso rimane nella Fase 3 fi
 
 
 \subsection{Fase 4: ordinamento sequenziale} \label{subsect_Phase4}
-A questo punto ogni processo procede all'applicazione della versione sequenziale di Quicksort sul proprio sottoarray e, al termine, invia i risultati a  \texttt{P0}.
+A questo punto ogni processo procede all'applicazione della versione sequenziale di Quick Sort sul proprio sottoarray e, al termine, invia i risultati a  \texttt{P0}.
 Secondo \cite{PaperQuickSort}, quando un processo termina l'ordinamento della propria sezione, procede ad aiutare i processi ancora in attività nella Fase 4 accedendo direttamente alle loro variabili. 
 
 Ottenere lo stesso livello di interazione in MPI sarebbe stato molto impegnativo dal punto di vista implementativo, quindi abbiamo scelto di lasciare che ogni processo proceda indipendentemente dagli altri. Per compensare, però, e ottenere comunque una buona suddivisione del carico, nella Fase 1 (\textit{Sezione \ref{subsect_Phase1}}) abbiamo effettuato una scelta del pivot particolarmente costosa che tiene in considerazione la media tra il massimo e il minimo valore di una sequenza di 3 elementi casuali presi dall'input.
 
-In pratica, la suddivisione si è rivelata generalmente equa. Essendo questa, però, una scelta costosa, nell'implementazione sequenziale di Quicksort abbiamo optato per una scelta molto più rapida: la media tra il primo e l'ultimo elemento dell'array. Inoltre, per velocizzare ulteriormente la Fase 4, abbiamo adottato un approccio ibrido che, sotto un certo numero di elementi (in seguito ad analisi sperimentali questa soglia è stata posta a 30 elementi),  sfrutta Insertionsort . Questo algoritmo, infatti, ha un overhead minore di Quicksort e, per input così piccoli, risulta più rapido.
+In pratica, la suddivisione si è rivelata generalmente equa. Essendo questa, però, una scelta costosa, nell'implementazione sequenziale di Quick Sort abbiamo optato per una scelta molto più rapida: la media tra il primo e l'ultimo elemento dell'array. Inoltre, per velocizzare ulteriormente la Fase 4, abbiamo adottato un approccio ibrido che, sotto un certo numero di elementi (in seguito ad analisi sperimentali questa soglia è stata posta a 30 elementi),  sfrutta Insertion Sort . Questo algoritmo, infatti, ha un overhead minore di Quick Sort e, per input così piccoli, risulta più rapido.
 
