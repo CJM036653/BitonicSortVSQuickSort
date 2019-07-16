@@ -5,7 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
-/*#include <libhpc.h>*/
+#include <libhpc.h>
 
 #include "BitonicSort.h"
 #include "QuickSort.h"
@@ -179,22 +179,22 @@ int main(int argc, char* argv[])
     MPI_Bcast(&i_inputSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     /* Avvio analisi delle prestazioni. */
-    /*
-        hpmInit(0, "BitonicSortVSQuickSort");
-        hpmStart(BITONIC_PERFORMANCE_ID, "BitonicSort");
-    */
+    
+    hpmInit(0, "BitonicSortVSQuickSort");
+    hpmStart(BITONIC_PERFORMANCE_ID, "BitonicSort");
+    
     /* Avvio di BitonicSort. */
 	ar_bitonic = bitonicSortManager(ar_bitonic, i_inputSize, i_rank, i_totalProcesses);
-    /*
-        hpmStop(BITONIC_PERFORMANCE_ID);
-        hpmStart(QUICK_PERFORMANCE_ID, "QuickSort");
-    */
+    
+    hpmStop(BITONIC_PERFORMANCE_ID);
+    hpmStart(QUICK_PERFORMANCE_ID, "QuickSort");
+    
     /* Avvio di QuickSort. */
 	ar_quick = quickSortManager(ar_quick, i_inputSize, i_rank, i_totalProcesses);
-    /*
-        hpmStop(QUICK_PERFORMANCE_ID);
-        hpmTerminate(0);
-    */
+    
+    hpmStop(QUICK_PERFORMANCE_ID);
+    hpmTerminate(0);
+    
 
     if (i_rank == 0)
     {
